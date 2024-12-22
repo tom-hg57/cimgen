@@ -1,0 +1,8 @@
+BaseVoltage
+IdentifiedObject
+PowerTransformerEnd
+SvVoltage
+TopologicalIsland
+TopologicalNode
+TransformerEnd
+WindingConnection

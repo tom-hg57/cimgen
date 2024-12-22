@@ -5,6 +5,7 @@ include cimgen/languages/java/*.java
 include cimgen/languages/java/**/*.java
 include cimgen/languages/javadb/templates/*.mustache
 include cimgen/languages/javadb/*.java
+include cimgen/languages/javadb/*.txt
 include cimgen/languages/javascript/templates/*.mustache
 include cimgen/languages/modernpython/templates/*.mustache
 include cimgen/languages/modernpython/utils/*.mustache

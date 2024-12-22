@@ -1,8 +1,11 @@
 import chevron
+import logging
 import shutil
 from pathlib import Path
 from importlib.resources import files
 from typing import Callable
+
+logger = logging.getLogger(__name__)
 
 
 # Setup called only once: make output directory, create base class, create profile class, etc.
@@ -41,6 +44,8 @@ def get_class_location(class_name: str, class_map: dict, version: str) -> str:  
 
 # This is the function that runs the template.
 def run_template(output_path: str, class_details: dict) -> None:
+    if _filter_cim_classes(class_details):
+        return
     if class_details["is_a_primitive_class"] or class_details["is_a_datatype_class"]:
         return
     if class_details["is_an_enum_class"]:
@@ -79,3 +84,57 @@ def _get_label_without_keyword(label: str) -> str:
 
 def resolve_headers(path: str, version: str) -> None:  # NOSONAR
     pass
+
+
+def _filter_cim_classes(class_details: dict) -> bool:
+    """Filter out all cim classes that are not in cim_class_filter_list.txt
+
+    If cim_class_filter_list.txt don't exist nothing is filtered.
+    If cim_class_filter_list.txt exists only classes in the list should be created.
+    In these classes the attributes with not created attribute_classes are filtered out.
+
+    :param class_details: Dictionary with information about a class.
+    :return:              True = class is filtered out
+                          False = class not filtered out, but attributes in class_details are filtered
+    """
+    source_dir = Path(__file__).parent
+    filter_path = source_dir / "cim_class_filter_list.txt"
+    if filter_path.exists():
+        classes = set(filter_path.read_text().split())
+
+        # Check if class is filtered out
+        if not _class_ok(class_details, classes):
+            # Check for missing super classes in cim_class_filter_list.txt
+            if not classes.intersection(class_details["subclasses"]):
+                return True
+            logger.error("Superclass '{}' missing in cim_class_filter_list.txt".format(class_details["class_name"]))
+
+        # Filter attributes in class_details
+        class_details["attributes"] = list(
+            filter(lambda attr: _attribute_ok(attr, classes), class_details["attributes"])
+        )
+    return False
+
+
+def _class_ok(class_details: dict, classes: set[str]) -> bool:
+    """Check if the class is not filtered out.
+
+    :param class_details: Dictionary with information about a class.
+    :param classes:       Set of classes that should be created.
+    :return:              class is ok?
+    """
+    return class_details["class_name"] in classes
+
+
+def _attribute_ok(attribute: dict, classes: set[str]) -> bool:
+    """Check if the attribute is not filtered out.
+
+    :param attribute: Dictionary with information about an attribute.
+    :param classes:   Set of classes that should be created.
+    :return:          attribute is ok?
+    """
+    if attribute["attribute_class"] in classes:
+        return True
+    if attribute["is_primitive_attribute"] or attribute["is_datatype_attribute"]:
+        return True
+    return False
