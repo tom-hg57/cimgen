@@ -1,0 +1,113 @@
+/*
+Generated from the CGMES files via cimgen: https://github.com/sogno-platform/cimgen
+*/
+
+package cim4jdb;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
+
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+import org.springframework.data.repository.CrudRepository;
+
+{{#class_comment}}
+/**
+ * {{{class_comment}}}
+ */
+{{/class_comment}}
+@Data
+@Entity
+@EqualsAndHashCode(callSuper = true)
+@SuppressWarnings("unused")
+public class {{class_name}} extends {{subclass_of}} {
+
+    /**
+     * Default constructor.
+     */
+    public {{class_name}}() {
+        setCimType("{{class_name}}");
+    }
+
+{{#attributes}}
+{{#is_used}}
+{{#comment}}
+    /**
+     * {{comment}}
+     */
+{{/comment}}
+{{#is_primitive_attribute}}
+    private {{attribute_class}} {{> label_without_keyword}};
+{{/is_primitive_attribute}}
+{{#is_datatype_attribute}}
+    private Double {{label}};
+{{/is_datatype_attribute}}
+{{#is_enum_attribute}}
+    @Enumerated(EnumType.STRING)
+    private {{attribute_class}} {{label}};
+{{/is_enum_attribute}}
+{{#is_class_attribute}}
+{{#is_class_attribute_with_inverse_list}}
+    @ManyToOne
+    private {{attribute_class}} {{label}};
+{{/is_class_attribute_with_inverse_list}}
+{{^is_class_attribute_with_inverse_list}}
+    @OneToOne
+    private {{attribute_class}} {{label}};
+{{/is_class_attribute_with_inverse_list}}
+{{/is_class_attribute}}
+{{#is_list_attribute}}
+    @OneToMany(fetch = FetchType.EAGER)
+    private Set<{{attribute_class}}> {{label}} = new HashSet<>();
+{{/is_list_attribute}}
+{{/is_used}}
+{{^is_used}}
+    /**
+{{#comment}}
+     * {{comment}}
+{{/comment}}
+     *
+     * NOT USED
+{{#is_primitive_attribute}}
+     * private {{attribute_class}} {{> label_without_keyword}};
+{{/is_primitive_attribute}}
+{{#is_datatype_attribute}}
+     * private Double {{label}};
+{{/is_datatype_attribute}}
+{{#is_enum_attribute}}
+     * @Enumerated(EnumType.STRING)
+     * private {{attribute_class}} {{label}};
+{{/is_enum_attribute}}
+{{#is_class_attribute}}
+{{#is_class_attribute_with_inverse_list}}
+     * @ManyToOne
+     * private {{attribute_class}} {{label}};
+{{/is_class_attribute_with_inverse_list}}
+{{^is_class_attribute_with_inverse_list}}
+     * @OneToOne
+     * private {{attribute_class}} {{label}};
+{{/is_class_attribute_with_inverse_list}}
+{{/is_class_attribute}}
+{{#is_list_attribute}}
+     * @OneToMany(fetch = FetchType.EAGER)
+     * private Set<{{attribute_class}}> {{label}} = new HashSet<>();
+{{/is_list_attribute}}
+     */
+{{/is_used}}
+
+{{/attributes}}
+    /**
+     * Nested repository. The implementation is automatically created.
+     */
+    public interface Repository extends CrudRepository<{{class_name}}, Long> {
+    }
+}
