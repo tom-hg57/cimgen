@@ -68,7 +68,7 @@ def run_template(output_path: str, class_details: dict) -> None:
 
 
 def _write_templated_file(class_file: Path, class_details: dict, template_filename: str) -> None:
-    with class_file.open("w", encoding="utf-8") as file:
+    with class_file.open("w", newline="", encoding="utf-8") as file:
         templates = files("cimgen.languages.java.templates")
         with templates.joinpath(template_filename).open(encoding="utf-8") as f:
             args = {
@@ -131,7 +131,7 @@ def _create_header_include_file(
     for line in footer:
         header.append(line)
     header_include_filepath = directory / header_include_filename
-    with header_include_filepath.open("w", encoding="utf-8") as f:
+    with header_include_filepath.open("w", newline="", encoding="utf-8") as f:
         f.writelines(header)
 
 
