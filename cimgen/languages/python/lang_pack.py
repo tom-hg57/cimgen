@@ -75,7 +75,7 @@ def run_template(output_path: str, class_details: dict) -> None:
 
 
 def _write_templated_file(class_file: str, class_details: dict, template_filename: str) -> None:
-    with open(class_file, "w", encoding="utf-8") as file:
+    with open(class_file, "w", newline="", encoding="utf-8") as file:
         class_details["set_default"] = _set_default
         templates = files("cimgen.languages.python.templates")
         with templates.joinpath(template_filename).open(encoding="utf-8") as f:
@@ -99,7 +99,7 @@ def _create_base(path: str) -> None:
         "    def printxml(self, dict={}):\n",
         "        return dict\n",
     ]
-    with open(base_path, "w", encoding="utf-8") as f:
+    with open(base_path, "w", newline="", encoding="utf-8") as f:
         for line in base:
             f.write(line)
 
@@ -122,7 +122,7 @@ def resolve_headers(path: str, version: str) -> None:  # NOSONAR
     include_names = []
     for filename in sorted(filenames):
         include_names.append(os.path.splitext(os.path.basename(filename))[0])
-    with open(path + "/__init__.py", "w", encoding="utf-8") as header_file:
+    with open(path + "/__init__.py", "w", newline="", encoding="utf-8") as header_file:
         for include_name in include_names:
             if include_name not in class_blacklist:
                 header_file.write(
