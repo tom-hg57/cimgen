@@ -140,7 +140,7 @@ def _class_ok(class_details: dict, classes: set[str]) -> bool:
     :param classes:       Set of classes that should be created.
     :return:              Class is ok?
     """
-    return class_details["class_name"] in classes
+    return class_details["class_name"] in classes or class_details["is_an_enum_class"]
 
 
 def _attribute_ok(attribute: dict, classes: set[str]) -> bool:
@@ -152,6 +152,6 @@ def _attribute_ok(attribute: dict, classes: set[str]) -> bool:
     """
     if attribute["attribute_class"] in classes:
         return True
-    if attribute["is_primitive_attribute"] or attribute["is_datatype_attribute"]:
+    if attribute["is_primitive_attribute"] or attribute["is_datatype_attribute"] or attribute["is_enum_attribute"]:
         return True
     return False
