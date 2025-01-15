@@ -45,10 +45,18 @@ def get_class_location(class_name: str, class_map: dict, version: str) -> str:  
 # This is the function that runs the template.
 def run_template(output_path: str, class_details: dict) -> None:
 
+    # Add some class infos
+    special_table_name = _special_table_name(class_details["class_name"])
+    if special_table_name:
+        class_details["special_table_name"] = special_table_name
+
     # Add some attribute infos
     for attribute in class_details["attributes"]:
         if _attribute_is_primitive_string(attribute) and attribute["attribute_class"] != "String":
             attribute["primitive_java_type"] = "String"
+        special_column_name = _special_column_name(attribute["label"])
+        if special_column_name:
+            attribute["special_column_name"] = special_column_name
 
     if _filter_cim_classes(class_details):
         return
@@ -86,6 +94,32 @@ def _get_label_without_keyword(label: str) -> str:
     if label == "switch":
         return "_switch"
     return label
+
+
+def _special_table_name(class_name: str) -> str | None:
+    """Get the name of the database table if different from class name.
+
+    Some class names are not allowed as name of a database table.
+
+    :param class_name:  Original class name
+    :return:            Table name or None if no special table name needed
+    """
+    if class_name == "Limit":
+        return "_Limit"
+    return None
+
+
+def _special_column_name(label: str) -> str | None:
+    """Get the name of the database column if different from label.
+
+    Some label names are not allowed as name of a database column.
+
+    :param label:  Original label
+    :return:       Column name or None if no special column name needed
+    """
+    if label == "value":
+        return "_value"
+    return None
 
 
 def _attribute_is_primitive_string(attribute: dict) -> bool:
