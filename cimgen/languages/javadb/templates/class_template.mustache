@@ -37,8 +37,8 @@ public class {{class_name}} extends {{subclass_of}} {
     public {{class_name}}() {
         setCimType("{{class_name}}");
     }
-
 {{#attributes}}
+
 {{#is_used}}
 {{#comment}}
     /**
@@ -46,10 +46,15 @@ public class {{class_name}} extends {{subclass_of}} {
      */
 {{/comment}}
 {{#is_primitive_attribute}}
+{{#primitive_java_type}}
+    private {{primitive_java_type}} {{> label_without_keyword}}; // {{attribute_class}}
+{{/primitive_java_type}}
+{{^primitive_java_type}}
     private {{attribute_class}} {{> label_without_keyword}};
+{{/primitive_java_type}}
 {{/is_primitive_attribute}}
 {{#is_datatype_attribute}}
-    private Double {{label}};
+    private Double {{label}}; // {{attribute_class}}
 {{/is_datatype_attribute}}
 {{#is_enum_attribute}}
     @Enumerated(EnumType.STRING)
@@ -78,10 +83,15 @@ public class {{class_name}} extends {{subclass_of}} {
      *
      * NOT USED
 {{#is_primitive_attribute}}
+{{#primitive_java_type}}
+     * private {{primitive_java_type}} {{> label_without_keyword}}; // {{attribute_class}}
+{{/primitive_java_type}}
+{{^primitive_java_type}}
      * private {{attribute_class}} {{> label_without_keyword}};
+{{/primitive_java_type}}
 {{/is_primitive_attribute}}
 {{#is_datatype_attribute}}
-     * private Double {{label}};
+     * private Double {{label}}; // {{attribute_class}}
 {{/is_datatype_attribute}}
 {{#is_enum_attribute}}
      * @Enumerated(EnumType.STRING)
@@ -103,8 +113,8 @@ public class {{class_name}} extends {{subclass_of}} {
 {{/is_list_attribute}}
      */
 {{/is_used}}
-
 {{/attributes}}
+
     /**
      * Nested repository. The implementation is automatically created.
      */

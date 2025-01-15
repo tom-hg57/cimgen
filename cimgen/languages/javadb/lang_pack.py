@@ -44,6 +44,12 @@ def get_class_location(class_name: str, class_map: dict, version: str) -> str:  
 
 # This is the function that runs the template.
 def run_template(output_path: str, class_details: dict) -> None:
+
+    # Add some attribute infos
+    for attribute in class_details["attributes"]:
+        if _attribute_is_primitive_string(attribute) and attribute["attribute_class"] != "String":
+            attribute["primitive_java_type"] = "String"
+
     if _filter_cim_classes(class_details):
         return
     if class_details["is_a_primitive_class"] or class_details["is_a_datatype_class"]:
@@ -80,6 +86,17 @@ def _get_label_without_keyword(label: str) -> str:
     if label == "switch":
         return "_switch"
     return label
+
+
+def _attribute_is_primitive_string(attribute: dict) -> bool:
+    """Check if the attribute is a primitive attribute that is used like a string (Date, MonthDay etc).
+
+    :param attribute: Dictionary with information about an attribute.
+    :return:          Attribute is a primitive string?
+    """
+    return attribute["is_primitive_attribute"] and (
+        attribute["attribute_class"] not in ("Float", "Decimal", "Integer", "Boolean")
+    )
 
 
 def resolve_headers(path: str, version: str) -> None:  # NOSONAR
@@ -121,7 +138,7 @@ def _class_ok(class_details: dict, classes: set[str]) -> bool:
 
     :param class_details: Dictionary with information about a class.
     :param classes:       Set of classes that should be created.
-    :return:              class is ok?
+    :return:              Class is ok?
     """
     return class_details["class_name"] in classes
 
@@ -131,7 +148,7 @@ def _attribute_ok(attribute: dict, classes: set[str]) -> bool:
 
     :param attribute: Dictionary with information about an attribute.
     :param classes:   Set of classes that should be created.
-    :return:          attribute is ok?
+    :return:          Attribute is ok?
     """
     if attribute["attribute_class"] in classes:
         return True
