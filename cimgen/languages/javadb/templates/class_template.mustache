@@ -58,6 +58,7 @@ public class {{class_name}} extends {{subclass_of}} {
 {{/is_datatype_attribute}}
 {{#is_enum_attribute}}
     @Enumerated(EnumType.STRING)
+    @Column(columnDefinition="varchar(255)")
     private {{attribute_class}} {{label}};
 {{/is_enum_attribute}}
 {{#is_class_attribute}}
@@ -95,6 +96,7 @@ public class {{class_name}} extends {{subclass_of}} {
 {{/is_datatype_attribute}}
 {{#is_enum_attribute}}
      * @Enumerated(EnumType.STRING)
+     * @Column(columnDefinition="varchar(255)")
      * private {{attribute_class}} {{label}};
 {{/is_enum_attribute}}
 {{#is_class_attribute}}
