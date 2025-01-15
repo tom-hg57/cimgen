@@ -74,16 +74,16 @@ public class {{class_name}} extends {{subclass_of}} {
 {{/is_enum_attribute}}
 {{#is_class_attribute}}
 {{#is_class_attribute_with_inverse_list}}
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     private {{attribute_class}} {{label}};
 {{/is_class_attribute_with_inverse_list}}
 {{^is_class_attribute_with_inverse_list}}
-    @OneToOne
+    @OneToOne(fetch = FetchType.LAZY)
     private {{attribute_class}} {{label}};
 {{/is_class_attribute_with_inverse_list}}
 {{/is_class_attribute}}
 {{#is_list_attribute}}
-    @OneToMany(fetch = FetchType.EAGER)
+    @OneToMany(fetch = FetchType.LAZY)
     private Set<{{attribute_class}}> {{label}} = new HashSet<>();
 {{/is_list_attribute}}
 {{/is_used}}
@@ -118,16 +118,16 @@ public class {{class_name}} extends {{subclass_of}} {
 {{/is_enum_attribute}}
 {{#is_class_attribute}}
 {{#is_class_attribute_with_inverse_list}}
-     * @ManyToOne
+     * @ManyToOne(fetch = FetchType.LAZY)
      * private {{attribute_class}} {{label}};
 {{/is_class_attribute_with_inverse_list}}
 {{^is_class_attribute_with_inverse_list}}
-     * @OneToOne
+     * @OneToOne(fetch = FetchType.LAZY)
      * private {{attribute_class}} {{label}};
 {{/is_class_attribute_with_inverse_list}}
 {{/is_class_attribute}}
 {{#is_list_attribute}}
-     * @OneToMany(fetch = FetchType.EAGER)
+     * @OneToMany(fetch = FetchType.LAZY)
      * private Set<{{attribute_class}}> {{label}} = new HashSet<>();
 {{/is_list_attribute}}
      */
