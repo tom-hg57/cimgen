@@ -4,17 +4,10 @@ Generated from the CGMES files via cimgen: https://github.com/sogno-platform/cim
 
 package cim4jdb;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 import lombok.Data;
@@ -44,10 +37,14 @@ public class {{class_name}} extends {{subclass_of}} {
     }
 {{#attributes}}
 
-{{#is_used}}
+{{#is_really_used}}
 {{#comment}}
     /**
      * {{comment}}
+{{^is_used}}
+     *
+     * (shouldn't have used, but is class attribute with inverse list)
+{{/is_used}}
      */
 {{/comment}}
 {{#is_primitive_attribute}}
@@ -74,20 +71,14 @@ public class {{class_name}} extends {{subclass_of}} {
 {{/is_enum_attribute}}
 {{#is_class_attribute}}
 {{#is_class_attribute_with_inverse_list}}
-    @ManyToOne(fetch = FetchType.LAZY)
-    private {{attribute_class}} {{label}};
+    private String {{label}}; // ManyToOne {{attribute_class}}
 {{/is_class_attribute_with_inverse_list}}
 {{^is_class_attribute_with_inverse_list}}
-    @OneToOne(fetch = FetchType.LAZY)
-    private {{attribute_class}} {{label}};
+    private String {{label}}; // OneToOne {{attribute_class}}
 {{/is_class_attribute_with_inverse_list}}
 {{/is_class_attribute}}
-{{#is_list_attribute}}
-    @OneToMany(fetch = FetchType.LAZY)
-    private Set<{{attribute_class}}> {{label}} = new HashSet<>();
-{{/is_list_attribute}}
-{{/is_used}}
-{{^is_used}}
+{{/is_really_used}}
+{{^is_really_used}}
     /**
 {{#comment}}
      * {{comment}}
@@ -118,20 +109,20 @@ public class {{class_name}} extends {{subclass_of}} {
 {{/is_enum_attribute}}
 {{#is_class_attribute}}
 {{#is_class_attribute_with_inverse_list}}
-     * @ManyToOne(fetch = FetchType.LAZY)
-     * private {{attribute_class}} {{label}};
+     * private String {{label}}; // ManyToOne {{attribute_class}}
 {{/is_class_attribute_with_inverse_list}}
 {{^is_class_attribute_with_inverse_list}}
-     * @OneToOne(fetch = FetchType.LAZY)
-     * private {{attribute_class}} {{label}};
+     * private String {{label}}; // OneToOne {{attribute_class}}
 {{/is_class_attribute_with_inverse_list}}
 {{/is_class_attribute}}
 {{#is_list_attribute}}
-     * @OneToMany(fetch = FetchType.LAZY)
-     * private Set<{{attribute_class}}> {{label}} = new HashSet<>();
+{{#is_used}}
+     * (should have used, but is list attribute)
+{{/is_used}}
+     * private Set<String> {{label}} = new HashSet<>(); // OneToMany Set<{{attribute_class}}>
 {{/is_list_attribute}}
      */
-{{/is_used}}
+{{/is_really_used}}
 {{/attributes}}
 
     /**

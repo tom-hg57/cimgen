@@ -57,6 +57,7 @@ def run_template(output_path: str, class_details: dict) -> None:
         special_column_name = _special_column_name(attribute["label"])
         if special_column_name:
             attribute["special_column_name"] = special_column_name
+        attribute["is_really_used"] = "true" if _attribute_is_really_used(attribute) else ""
 
     if _filter_cim_classes(class_details):
         return
@@ -189,3 +190,16 @@ def _attribute_ok(attribute: dict, classes: set[str]) -> bool:
     if attribute["is_primitive_attribute"] or attribute["is_datatype_attribute"] or attribute["is_enum_attribute"]:
         return True
     return False
+
+
+def _attribute_is_really_used(attribute: dict) -> bool:
+    """Check if the attribute is really used.
+
+    List attributes couldn't be used as OneToMany links. Instead of that the inverse attribute is linked ManyToOne.
+
+    :param attribute: Dictionary with information about an attribute.
+    :return:          Attribute is really used?
+    """
+    if attribute["is_used"] and not attribute["is_list_attribute"]:
+        return True
+    return attribute["is_class_attribute_with_inverse_list"]
