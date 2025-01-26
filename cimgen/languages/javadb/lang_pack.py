@@ -65,13 +65,16 @@ def run_template(output_path: str, class_details: dict) -> None:
         return
     if class_details["is_an_enum_class"]:
         template = enum_template_file
+        class_category = "types"
     else:
         template = class_template_file
-    class_file = Path(output_path) / (class_details["class_name"] + template["ext"])
+        class_category = ""
+    class_file = Path(output_path) / class_category / (class_details["class_name"] + template["ext"])
     _write_templated_file(class_file, class_details, template["filename"])
 
 
 def _write_templated_file(class_file: Path, class_details: dict, template_filename: str) -> None:
+    class_file.parent.mkdir(parents=True, exist_ok=True)
     with class_file.open("w", encoding="utf-8") as file:
         templates = files("cimgen.languages.javadb.templates")
         with templates.joinpath(template_filename).open(encoding="utf-8") as f:
