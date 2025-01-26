@@ -4,11 +4,16 @@ Generated from the CGMES files via cimgen: https://github.com/sogno-platform/cim
 
 package cim4jdb;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -53,9 +58,25 @@ public class {{class_name}} extends {{subclass_of}} {
 {{/special_column_name}}
 {{#primitive_java_type}}
     private {{primitive_java_type}} {{> label_without_keyword}}; // {{attribute_class}}
+
+    public String {{label}}ToString() {
+        return {{> label_without_keyword}}.toString();
+    }
+
+    public void {{label}}FromString(String stringValue) {
+        {{> label_without_keyword}} = get{{primitive_java_type}}FromString(stringValue);
+    }
 {{/primitive_java_type}}
 {{^primitive_java_type}}
     private {{attribute_class}} {{> label_without_keyword}};
+
+    public String {{label}}ToString() {
+        return {{> label_without_keyword}}.toString();
+    }
+
+    public void {{label}}FromString(String stringValue) {
+        {{> label_without_keyword}} = get{{attribute_class}}FromString(stringValue);
+    }
 {{/primitive_java_type}}
 {{/is_primitive_attribute}}
 {{#is_datatype_attribute}}
@@ -63,16 +84,48 @@ public class {{class_name}} extends {{subclass_of}} {
     @Column(name = "{{special_column_name}}")
 {{/special_column_name}}
     private Double {{label}}; // {{attribute_class}}
+
+    public String {{label}}ToString() {
+        return {{label}}.toString();
+    }
+
+    public void {{label}}FromString(String stringValue) {
+        {{label}} = getDoubleFromString(stringValue);
+    }
 {{/is_datatype_attribute}}
 {{#is_enum_attribute}}
     private String {{label}}; // {{attribute_class}}
+
+    public String {{label}}ToString() {
+        return {{label}};
+    }
+
+    public void {{label}}FromString(String stringValue) {
+        {{label}} = stringValue;
+    }
 {{/is_enum_attribute}}
 {{#is_class_attribute}}
 {{#is_class_attribute_with_inverse_list}}
     private String {{label}}; // ManyToOne {{attribute_class}}
+
+    public String {{label}}ToString() {
+        return {{label}};
+    }
+
+    public void {{label}}FromString(String stringValue) {
+        {{label}} = stringValue;
+    }
 {{/is_class_attribute_with_inverse_list}}
 {{^is_class_attribute_with_inverse_list}}
     private String {{label}}; // OneToOne {{attribute_class}}
+
+    public String {{label}}ToString() {
+        return {{label}};
+    }
+
+    public void {{label}}FromString(String stringValue) {
+        {{label}} = stringValue;
+    }
 {{/is_class_attribute_with_inverse_list}}
 {{/is_class_attribute}}
 {{/is_really_used}}
@@ -125,5 +178,144 @@ public class {{class_name}} extends {{subclass_of}} {
      * Nested repository. The implementation is automatically created.
      */
     public interface Repository extends CrudRepository<{{class_name}}, Long> {
+    }
+
+    /**
+     * Get a set of all attribute names of the CIM type.
+     *
+     * The set includes all inherited attributes.
+     * The attribute name is only the last part of the full name (without the class name).
+     *
+     * @return All attributes of the CIM type
+     */
+    @Override
+    public Set<String> getAttributeNames() {
+        return ATTR_DETAILS_MAP.keySet();
+    }
+
+    private static final Map<String, AttrDetails> ATTR_DETAILS_MAP;
+    static {
+        ATTR_DETAILS_MAP = new {{class_name}}().allAttrDetailsMap();
+    }
+
+    @Override
+    protected Map<String, AttrDetails> allAttrDetailsMap() {
+        Map<String, AttrDetails> map = new LinkedHashMap<>(classAttrDetailsMap);
+        map.putAll(super.allAttrDetailsMap());
+        map.remove("LAST_ATTRIBUTE");
+        return map;
+    }
+
+    @Transient
+    private Map<String, AttrDetails> classAttrDetailsMap = Map.ofEntries(
+{{#attributes}}
+{{#is_really_used}}
+{{#is_primitive_attribute}}
+            Map.entry("{{label}}", new AttrDetails("{{class_name}}.{{label}}", this::{{label}}ToString, this::{{label}}FromString, true, false, true)),
+{{/is_primitive_attribute}}
+{{#is_datatype_attribute}}
+            Map.entry("{{label}}", new AttrDetails("{{class_name}}.{{label}}", this::{{label}}ToString, this::{{label}}FromString, true, false, true)),
+{{/is_datatype_attribute}}
+{{#is_enum_attribute}}
+            Map.entry("{{label}}", new AttrDetails("{{class_name}}.{{label}}", this::{{label}}ToString, this::{{label}}FromString, false, true, true)),
+{{/is_enum_attribute}}
+{{#is_class_attribute}}
+            Map.entry("{{label}}", new AttrDetails("{{class_name}}.{{label}}", this::{{label}}ToString, this::{{label}}FromString, false, false, true)),
+{{/is_class_attribute}}
+{{/is_really_used}}
+{{/attributes}}
+            Map.entry("LAST_ATTRIBUTE", new AttrDetails()));
+
+    /**
+     * Get the full name of an attribute.
+     *
+     * The full name is "<class_name>.<attribute_name>".
+     *
+     * @param attrName The attribute name
+     * @return         The full name
+     */
+    @Override
+    public String getAttributeFullName(String attrName) {
+        return ATTR_DETAILS_MAP.get(attrName).fullName;
+    }
+
+    /**
+     * Get an attribute value as string.
+     *
+     * @param attrName The attribute name
+     * @return         The attribute value
+     */
+    @Override
+    public String getAttribute(String attrName) {
+        return getAttribute("{{class_name}}", attrName);
+    }
+
+    @Override
+    protected String getAttribute(String className, String attrName) {
+        if (classAttrDetailsMap.containsKey(attrName)) {
+            var getterFunction = classAttrDetailsMap.get(attrName).getter;
+            return getterFunction.get();
+        }
+        return super.getAttribute(className, attrName);
+    }
+
+    /**
+     * Set an attribute value.
+     *
+     * @param attrName    The attribute name
+     * @param stringValue The attribute value as string
+     */
+    @Override
+    public void setAttribute(String attrName, String stringValue) {
+        setAttribute("{{class_name}}", attrName, stringValue);
+    }
+
+    @Override
+    protected void setAttribute(String className, String attrName, String stringValue) {
+        if (classAttrDetailsMap.containsKey(attrName)) {
+            var setterFunction = classAttrDetailsMap.get(attrName).setter;
+            setterFunction.accept(stringValue);
+        } else {
+            super.setAttribute(className, attrName, stringValue);
+        }
+    }
+
+    /**
+     * Check if the attribute is a primitive attribute.
+     *
+     * This includes datatype_attributes.
+     *
+     * @param attrName The attribute name
+     * @return         Is it a primitive attribute?
+     */
+    @Override
+    public boolean isPrimitiveAttribute(String attrName) {
+        return ATTR_DETAILS_MAP.containsKey(attrName) && ATTR_DETAILS_MAP.get(attrName).isPrimitive;
+    }
+
+    /**
+     * Check if the attribute is an enum attribute.
+     *
+     * @param attrName The attribute name
+     * @return         Is it an enum attribute?
+     */
+    @Override
+    public boolean isEnumAttribute(String attrName) {
+        return ATTR_DETAILS_MAP.containsKey(attrName) && ATTR_DETAILS_MAP.get(attrName).isEnum;
+    }
+
+    /**
+     * Check if the attribute is used.
+     *
+     * Some attributes are declared as unused in the CGMES definition.
+     * In most cases these are list attributes, i.e. lists of links to other CIM objects.
+     * But there are some exceptions, e.g. the list of ToplogicalNodes in TopologicalIsland.
+     *
+     * @param attrName The attribute name
+     * @return         Is the attribute used?
+     */
+    @Override
+    public boolean isUsedAttribute(String attrName) {
+        return ATTR_DETAILS_MAP.containsKey(attrName) && ATTR_DETAILS_MAP.get(attrName).isUsed;
     }
 }
