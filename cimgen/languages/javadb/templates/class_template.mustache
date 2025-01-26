@@ -65,9 +65,7 @@ public class {{class_name}} extends {{subclass_of}} {
     private Double {{label}}; // {{attribute_class}}
 {{/is_datatype_attribute}}
 {{#is_enum_attribute}}
-    @Enumerated(EnumType.STRING)
-    @Column(columnDefinition="varchar(255)")
-    private {{attribute_class}} {{label}};
+    private String {{label}}; // {{attribute_class}}
 {{/is_enum_attribute}}
 {{#is_class_attribute}}
 {{#is_class_attribute_with_inverse_list}}
@@ -103,9 +101,7 @@ public class {{class_name}} extends {{subclass_of}} {
      * private Double {{label}}; // {{attribute_class}}
 {{/is_datatype_attribute}}
 {{#is_enum_attribute}}
-     * @Enumerated(EnumType.STRING)
-     * @Column(columnDefinition="varchar(255)")
-     * private {{attribute_class}} {{label}};
+     * private String {{label}}; // {{attribute_class}}
 {{/is_enum_attribute}}
 {{#is_class_attribute}}
 {{#is_class_attribute_with_inverse_list}}
