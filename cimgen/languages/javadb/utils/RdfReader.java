@@ -1,0 +1,132 @@
+package cim4jdb.utils;
+
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.util.List;
+import java.util.LinkedList;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import cim4jdb.BaseClass;
+import cim4jdb.CimClassMap;
+import cim4jdb.Logging;
+
+/**
+ * Read RDF files into a map of rdfid to CIM object.
+ */
+public final class RdfReader {
+
+    private static final Logging LOG = Logging.getLogger(RdfReader.class);
+
+    private static Map<String, BaseClass> model = new LinkedHashMap<>();
+    private static Map<String, List<SetAttribute>> setAttributeMap = new LinkedHashMap<>();
+
+    /**
+     * Read the CIM data from a RDF file.
+     *
+     * @param path Path of file to read
+     * @return CIM data as map of rdfid to CIM object
+     */
+    public static Map<String, BaseClass> read(String path) {
+        try (var stream = new FileInputStream(path)) {
+            return read(stream);
+        } catch (Exception ex) {
+            String txt = "Error while reading rdf file: " + path;
+            LOG.error(txt, ex);
+            throw new RuntimeException(txt, ex);
+        }
+    }
+
+    /**
+     * Read the CIM data from a stream.
+     *
+     * @param stream Input stream to read
+     * @return CIM data as map of rdfid to CIM object
+     */
+    public static Map<String, BaseClass> read(InputStream stream) {
+        model.clear();
+        setAttributeMap.clear();
+        RdfParser.parse(stream, RdfReader::createCimObject);
+        setRemainingAttributes();
+        return model;
+    }
+
+    private static void createCimObject(RdfParser.Element element) {
+        var className = element.name.getLocalPart();
+        if (element.id != null) {
+            if (CimClassMap.isCimClass(className)) {
+                BaseClass object = model.get(element.id);
+                if (object == null) {
+                    object = createNewObject(className, element.id);
+                    model.put(element.id, object);
+                }
+
+                // Set attributes of new object
+                for (RdfParser.Attribute attribute : element.attributes) {
+                    setAttribute(object, attribute);
+                }
+            } else {
+                LOG.warn(String.format("Unknown CIM class: %s (rdf:ID: %s)", className, element.id));
+            }
+        } else {
+            LOG.warn(String.format("Possible CIM class: %s (rdf:ID missing)", className));
+        }
+    }
+
+    private static BaseClass createNewObject(String className, String rdfid) {
+        BaseClass object = CimClassMap.createCimObject(className);
+        object.setRdfid(rdfid);
+        LOG.debug(String.format("Created object of type: %s with rdf:ID: %s", className, rdfid));
+        return object;
+    }
+
+    private static void setAttribute(BaseClass object, RdfParser.Attribute attribute) {
+        var attributeName = attribute.name.getLocalPart();
+        if (attributeName.contains(".")) {
+            attributeName = attributeName.substring(attributeName.lastIndexOf('.') + 1);
+        }
+        if (attribute.resource != null) {
+            if (!object.isEnumAttribute(attributeName)) {
+                if (model.containsKey(attribute.resource)) {
+                    // Set class attribute as link to an already existng object
+                    BaseClass attributeObject = model.get(attribute.resource);
+                    object.setAttribute(attributeName, attributeObject.getRdfid());
+                } else {
+                    // Set attribute later in setRemainingAttributes
+                    var setAttribute = new SetAttribute(attributeName, object);
+                    setAttributeMap.computeIfAbsent(attribute.resource, k -> new LinkedList<>()).add(setAttribute);
+                }
+            } else {
+                // Set enum attributes
+                object.setAttribute(attributeName, attribute.resource);
+            }
+        } else {
+            // Set primitive attributes (including datatype_attributes)
+            object.setAttribute(attributeName, attribute.value);
+        }
+    }
+
+    private static void setRemainingAttributes() {
+        for (var resource : setAttributeMap.keySet()) {
+            var setAttributeList = setAttributeMap.get(resource);
+            BaseClass attributeObject = model.get(resource);
+            if (attributeObject == null) {
+                attributeObject = createNewObject("IdentifiedObject", resource);
+                model.put(resource, attributeObject);
+            }
+            for (var setAttribute : setAttributeList) {
+                setAttribute.object.setAttribute(setAttribute.name, attributeObject.getRdfid());
+            }
+        }
+    }
+
+    public static class SetAttribute {
+        public SetAttribute(String n, BaseClass o) {
+            name = n;
+            object = o;
+        }
+
+        public String name;
+        public BaseClass object;
+    }
+}
