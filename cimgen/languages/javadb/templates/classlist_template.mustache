@@ -1,0 +1,46 @@
+/*
+Generated from the CGMES files via cimgen: https://github.com/sogno-platform/cimgen
+*/
+
+package cim4jdb;
+
+import java.util.Map;
+import java.util.function.Supplier;
+
+public final class CimClassMap {
+
+    /**
+     * Checks if the class name is known as CIM class.
+     *
+     * @param className The class name to check.
+     * @return Is this a CIM class?
+     */
+    public static boolean isCimClass(java.lang.String className) {
+        return CLASS_MAP.containsKey(className);
+    }
+
+    /**
+     * Creates a new CIM object.
+     *
+     * @param className The class name of the new CIM object.
+     * @return The new CIM object.
+     */
+    public static BaseClass createCimObject(java.lang.String className) {
+        var supplierFunction = CLASS_MAP.get(className);
+        return supplierFunction.get();
+    }
+
+    /**
+     * Map of CIM class name to supplier function which creates a new CIM object.
+     */
+    public static final Map<java.lang.String, Supplier<BaseClass>> CLASS_MAP = Map.ofEntries(
+{{#classes}}
+            Map.entry("{{.}}", () -> new {{.}}()),
+{{/classes}}
+            Map.entry("LAST_CLASS", () -> null));
+
+    /**
+     * The number of CIM classes, i.e. the number of real entres in CLASS_MAP.
+     */
+    public static final int CLASS_MAP_COUNT = CLASS_MAP.size() - 1;
+}

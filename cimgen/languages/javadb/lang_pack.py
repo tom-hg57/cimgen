@@ -28,6 +28,7 @@ def setup(output_path: str, cgmes_profile_details: list[dict], cim_namespace: st
 # These are the files that are used to generate the java files.
 class_template_file = {"filename": "class_template.mustache", "ext": ".java"}
 enum_template_file = {"filename": "enum_template.mustache", "ext": ".java"}
+classlist_template = {"filename": "classlist_template.mustache", "ext": ".java"}
 
 partials = {
     "label_without_keyword": "{{#lang_pack.label_without_keyword}}{{label}}{{/lang_pack.label_without_keyword}}",
@@ -137,10 +138,6 @@ def _attribute_is_primitive_string(attribute: dict) -> bool:
     )
 
 
-def resolve_headers(path: str, version: str) -> None:  # NOSONAR
-    pass
-
-
 def _filter_cim_classes(class_details: dict) -> bool:
     """Filter out all cim classes that are not in cim_class_filter_list.txt
 
@@ -206,3 +203,33 @@ def _attribute_is_really_used(attribute: dict) -> bool:
     if attribute["is_used"] and not attribute["is_list_attribute"]:
         return True
     return attribute["is_class_attribute_with_inverse_list"]
+
+
+# The code below this line is used after the main cim_generate phase to generate CIMClassMap.java.
+
+class_blacklist = [
+    "BaseClass",
+    "CimModel",
+    "CimClassMap",
+    "Logging",
+]
+
+
+def _create_classlist_file(
+    directory: Path, classlist_filename: str, template_filename: str, blacklist: list[str]
+) -> None:
+    classes = []
+    for file in sorted(directory.glob("*.java"), key=lambda f: f.stem):
+        class_name = file.stem
+        if class_name not in blacklist:
+            classes.append(class_name)
+    _write_templated_file(directory / classlist_filename, {"classes": classes}, template_filename)
+
+
+def resolve_headers(path: str, version: str) -> None:  # NOSONAR
+    _create_classlist_file(
+        Path(path),
+        "CimClassMap" + classlist_template["ext"],
+        classlist_template["filename"],
+        class_blacklist,
+    )
