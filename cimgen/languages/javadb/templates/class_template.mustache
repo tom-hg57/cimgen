@@ -27,11 +27,11 @@ import org.springframework.data.repository.CrudRepository;
 {{/class_comment}}
 @Data
 @Entity
+@EqualsAndHashCode(callSuper = true)
+@SuppressWarnings("unused")
 {{#special_table_name}}
 @Table(name = "{{special_table_name}}")
 {{/special_table_name}}
-@EqualsAndHashCode(callSuper = true)
-@SuppressWarnings("unused")
 public class {{class_name}} extends {{subclass_of}} {
 
     /**
@@ -94,6 +94,9 @@ public class {{class_name}} extends {{subclass_of}} {
     }
 {{/is_datatype_attribute}}
 {{#is_enum_attribute}}
+{{#special_column_name}}
+    @Column(name = "{{special_column_name}}")
+{{/special_column_name}}
     private String {{label}}; // {{attribute_class}}
 
     public String {{label}}ToString() {
@@ -154,6 +157,9 @@ public class {{class_name}} extends {{subclass_of}} {
      * private Double {{label}}; // {{attribute_class}}
 {{/is_datatype_attribute}}
 {{#is_enum_attribute}}
+{{#special_column_name}}
+     * @Column(name = "{{special_column_name}}")
+{{/special_column_name}}
      * private String {{label}}; // {{attribute_class}}
 {{/is_enum_attribute}}
 {{#is_class_attribute}}

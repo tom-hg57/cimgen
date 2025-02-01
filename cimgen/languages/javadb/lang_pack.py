@@ -99,7 +99,7 @@ def label_without_keyword(text: str, render: Callable[[str], str]) -> str:
 
 def _get_label_without_keyword(label: str) -> str:
     if label == "switch":
-        return "_switch"
+        label += "_"
     return label
 
 
@@ -111,8 +111,8 @@ def _special_table_name(class_name: str) -> str | None:
     :param class_name:  Original class name
     :return:            Table name or None if no special table name needed
     """
-    if class_name == "Limit":
-        return "_Limit"
+    if class_name in ("Limit", "Resource"):
+        return class_name + "_"
     return None
 
 
@@ -124,8 +124,8 @@ def _special_column_name(label: str) -> str | None:
     :param label:  Original label
     :return:       Column name or None if no special column name needed
     """
-    if label == "value":
-        return "_value"
+    if label in ("mode", "number", "order", "value"):
+        return label + "_"
     return None
 
 
