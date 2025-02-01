@@ -55,6 +55,8 @@ def run_template(output_path: str, class_details: dict) -> None:
     for attribute in class_details["attributes"]:
         if _attribute_is_primitive_string(attribute) and attribute["attribute_class"] != "String":
             attribute["primitive_java_type"] = "String"
+        elif attribute["attribute_class"] == "Decimal":
+            attribute["primitive_java_type"] = "Float"
         special_column_name = _special_column_name(attribute["label"])
         if special_column_name:
             attribute["special_column_name"] = special_column_name
