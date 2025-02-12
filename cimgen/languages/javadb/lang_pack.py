@@ -212,6 +212,7 @@ def _attribute_is_really_used(attribute: dict) -> bool:
 class_blacklist = [
     "BaseClass",
     "CimModel",
+    "CimModelService",
     "CimClassMap",
     "Logging",
 ]
