@@ -1,6 +1,7 @@
 package cim4jdb;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -17,6 +18,7 @@ import jakarta.persistence.ManyToOne;
 
 import lombok.Data;
 
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 
 /**
@@ -62,13 +64,26 @@ public abstract class BaseClass {
      * Nested repository. The implementation is automatically created.
      */
     public interface Repository extends CrudRepository<BaseClass, Long> {
+        /**
+         * Searches for all CIM objects that match the specified cimModelId, and returns
+         * ID and CIM type of these objects.
+         *
+         * Using an explicit query avoids huge select statements by getting only ID and
+         * CIM type from the BaseClass table. To get the real CIM objects the repository
+         * of the subclass according to the CIM type should be used.
+         *
+         * @param cimModelId ID of a CIM model
+         * @return           CIM objects of this model as list with ID and CIM type
+         */
+        @Query("SELECT obj.id, obj.cimType FROM BaseClass obj WHERE obj.cimModel.cimModelId = ?1")
+        List<Object[]> findByModel(Long cimModelId);
     }
 
     /**
      * Get a set of all attribute names of the CIM type.
      *
-     * The set includes all inherited attributes.
-     * The attribute name is only the last part of the full name (without the class name).
+     * The set includes all inherited attributes. The attribute name is only the
+     * last part of the full name (without the class name).
      *
      * @return All attributes of the CIM type
      */
@@ -111,7 +126,8 @@ public abstract class BaseClass {
     public abstract void setAttribute(String attrName, String stringValue);
 
     protected void setAttribute(String className, String attrName, String stringValue) {
-        LOG.error(String.format("No-one knows what to do with attribute %s.%s and value %s", className, attrName, stringValue));
+        LOG.error(String.format("No-one knows what to do with attribute %s.%s and value %s", className, attrName,
+                stringValue));
     }
 
     /**
@@ -135,9 +151,10 @@ public abstract class BaseClass {
     /**
      * Check if the attribute is used.
      *
-     * Some attributes are declared as unused in the CGMES definition.
-     * In most cases these are list attributes, i.e. lists of links to other CIM objects.
-     * But there are some exceptions, e.g. the list of ToplogicalNodes in TopologicalIsland.
+     * Some attributes are declared as unused in the CGMES definition. In most cases
+     * these are list attributes, i.e. lists of links to other CIM objects. But
+     * there are some exceptions, e.g. the list of ToplogicalNodes in
+     * TopologicalIsland.
      *
      * @param attrName The attribute name
      * @return         Is the attribute used?
@@ -189,6 +206,7 @@ public abstract class BaseClass {
     protected static class AttrDetails {
         public AttrDetails() {
         }
+
         public AttrDetails(String f, Supplier<String> g, Consumer<String> s, boolean p, boolean e, boolean u) {
             fullName = f;
             getter = g;
