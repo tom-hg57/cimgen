@@ -4,43 +4,155 @@ Generated from the CGMES files via cimgen: https://github.com/sogno-platform/cim
 
 package cim4jdb;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
 public final class CimClassMap {
 
     /**
      * Checks if the class name is known as CIM class.
      *
      * @param className The class name to check.
-     * @return Is this a CIM class?
+     * @return          Is this a CIM class?
      */
-    public static boolean isCimClass(java.lang.String className) {
-        return CLASS_MAP.containsKey(className);
+    public static boolean isCimClass(String className) {
+        return CREATE_MAP.containsKey(className);
     }
 
     /**
      * Creates a new CIM object.
      *
      * @param className The class name of the new CIM object.
-     * @return The new CIM object.
+     * @return          The new CIM object.
      */
-    public static BaseClass createCimObject(java.lang.String className) {
-        var supplierFunction = CLASS_MAP.get(className);
-        return supplierFunction.get();
+    public static BaseClass createCimObject(String className) {
+        var createFunction = CREATE_MAP.get(className);
+        return createFunction.get();
+    }
+
+    /**
+     * Creates a new CIM object (as object of the correct class).
+     *
+     * @param clazz The class of the new CIM object.
+     * @return      The new CIM object.
+     */
+    @SuppressWarnings("unchecked")
+    public static <T extends BaseClass> T createCimObject(Class<T> clazz) {
+        var className = clazz.getSimpleName();
+        return (T) createCimObject(className);
+    }
+
+    /**
+     * Saves a CIM object to the database.
+     *
+     * The CIM object has to be an instance of the right class corresponding to the
+     * class name.
+     * The save function calls the save method of the repository embedded in this
+     * class.
+     *
+     * This function couldn't be static because it uses the repositories as Java
+     * Beans.
+     *
+     * @param className The class name of the new CIM object.
+     * @param obj       The CIM object.
+     * @return          The saved CIM object.
+     */
+    public BaseClass saveCimObject(String className, BaseClass obj) {
+        var saveFunction = SAVE_MAP.get(className);
+        return saveFunction.apply(obj);
+    }
+
+    /**
+     * Saves a CIM object to the database.
+     *
+     * @param clazz The class of the new CIM object.
+     * @param obj   The CIM object.
+     * @return      The saved CIM object.
+     */
+    @SuppressWarnings("unchecked")
+    public <T extends BaseClass> T saveCimObject(Class<? extends BaseClass> clazz, T obj) {
+        var className = clazz.getSimpleName();
+        return (T) saveCimObject(className, obj);
+    }
+
+    /**
+     * Reads a CIM object from the database.
+     *
+     * @param className The class name of the CIM object.
+     * @param id        The ID of the CIM object.
+     * @return          The read CIM object.
+     */
+    public BaseClass readCimObject(String className, Long id) {
+        var readFunction = READ_MAP.get(className);
+        return readFunction.apply(id);
+    }
+
+    /**
+     * Reads a CIM object from the database (as object of the correct class).
+     *
+     * @param className The class name of the CIM object.
+     * @param id        The ID of the CIM object.
+     * @return          The read CIM object.
+     */
+    @SuppressWarnings("unchecked")
+    public <T extends BaseClass> T readCimObject(Class<T> clazz, Long id) {
+        var className = clazz.getSimpleName();
+        return (T) readCimObject(className, id);
     }
 
     /**
      * Map of CIM class name to supplier function which creates a new CIM object.
      */
-    public static final Map<java.lang.String, Supplier<BaseClass>> CLASS_MAP = Map.ofEntries(
+    private static final Map<String, Supplier<BaseClass>> CREATE_MAP;
+    static {
+        var map = new LinkedHashMap<String, Supplier<BaseClass>>();
+
 {{#classes}}
-            Map.entry("{{.}}", () -> new {{.}}()),
+        map.put("{{.}}", () -> new {{.}}());
 {{/classes}}
-            Map.entry("LAST_CLASS", () -> null));
+
+        CREATE_MAP = Collections.unmodifiableMap(map);
+    }
 
     /**
-     * The number of CIM classes, i.e. the number of real entres in CLASS_MAP.
+     * Repositories used to save and read CIM objects to/from the database.
      */
-    public static final int CLASS_MAP_COUNT = CLASS_MAP.size() - 1;
+{{#classes}}
+    @Autowired private {{.}}.Repository repo{{.}};
+{{/classes}}
+
+    /**
+     * Map of CIM class name to function which saves a CIM object to the database.
+     */
+    private final Map<String, Function<BaseClass, BaseClass>> SAVE_MAP;
+    {
+        var map = new LinkedHashMap<String, Function<BaseClass, BaseClass>>();
+
+{{#classes}}
+        map.put("{{.}}", obj -> repo{{.}}.save(({{.}}) obj));
+{{/classes}}
+
+        SAVE_MAP = Collections.unmodifiableMap(map);
+    }
+
+    /**
+     * Map of CIM class name to function which reads a CIM object from the database.
+     */
+    private final Map<String, Function<Long, BaseClass>> READ_MAP;
+    {
+        var map = new LinkedHashMap<String, Function<Long, BaseClass>>();
+
+{{#classes}}
+        map.put("{{.}}", id -> repo{{.}}.findById(id).get());
+{{/classes}}
+
+        READ_MAP = Collections.unmodifiableMap(map);
+    }
 }
