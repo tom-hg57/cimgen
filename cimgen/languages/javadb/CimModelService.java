@@ -1,12 +1,19 @@
 package cim4jdb;
 
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
+
+import cim4jdb.utils.RdfReader;
+import de.psi.cimarchive.utils.ZipFileUtils;
 
 /**
  * Service class for managing CimModel objects.
@@ -16,7 +23,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class CimModelService {
 
     @Autowired
+    private CimModel.Repository cimModelRepository;
+
+    @Autowired
     private CimClassMap cimClassMap;
+
     @Autowired
     private BaseClass.Repository baseClassRepository;
 
@@ -38,6 +49,35 @@ public class CimModelService {
     }
 
     /**
+     * Saves model and several CIM objects to the database and links them to the
+     * model.
+     *
+     * @param model   The CIM model the objects has to be linked to.
+     * @param zipData The content of the zip file
+     * @return        The saved CIM model.
+     */
+    public CimModel saveCimModel(CimModel model, byte[] zipData) {
+        model = cimModelRepository.save(model);
+        var cimFileAsStringList = ZipFileUtils.extractCimFilesFromZipFile(zipData);
+        for (var cimString : cimFileAsStringList) {
+            try (var stream = new ByteArrayInputStream(cimString.getBytes(StandardCharsets.UTF_8))) {
+                var map = RdfReader.read(stream);
+                saveCimObjects(map.values(), model);
+            } catch (Exception ex) {
+                String txt = "Error while reading zip data";
+                // LOG.error(txt, ex);
+                throw new RuntimeException(txt, ex);
+            }
+        }
+        // LOG.debug(...);
+        for (var entry : getCimObjectInfos(model.getCimModelId()).entrySet()) {
+            System.out.println(String.format("Object in CIM model %d: id=%d type=%s", model.getCimModelId(),
+                    entry.getKey(), entry.getValue()));
+        }
+        return model;
+    }
+
+    /**
      * Saves a CIM object to the database and links it to the model.
      *
      * @param obj   The CIM object.
@@ -54,12 +94,16 @@ public class CimModelService {
      *
      * @param objList The list of objects of any CIM type.
      * @param model   The CIM model the objects has to be linked to.
+     * @return        The list of saved CIM objects.
      */
-    public void saveCimObjects(Iterable<BaseClass> objList, CimModel model) {
+    public List<BaseClass> saveCimObjects(Iterable<BaseClass> objList, CimModel model) {
+        var list = new LinkedList<BaseClass>();
         for (BaseClass obj : objList) {
             obj.setCimModel(model);
             obj = cimClassMap.saveCimObject(obj.getClass(), obj);
+            list.add(obj);
         }
+        return list;
     }
 
     /**
