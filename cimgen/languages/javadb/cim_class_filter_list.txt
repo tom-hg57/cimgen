@@ -3,12 +3,16 @@ ACLineSegment
 Analog
 AnalogValue
 BaseVoltage
+BoundaryPoint
 ConductingEquipment
 Conductor
+ConnectivityNode
 ConnectivityNodeContainer
 CurrentLimit
 EnergyConnection
 EnergyConsumer
+EnergySchedulingType
+EnergySource
 Equipment
 EquipmentContainer
 ExternalNetworkInjection
