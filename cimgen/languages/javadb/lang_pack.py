@@ -13,7 +13,9 @@ logger = logging.getLogger(__name__)
 # cgmes_profile_details contains index, names and uris for each profile.
 # We don't use that here because we aren't exporting into
 # separate profiles.
-def setup(output_path: str, cgmes_profile_details: list[dict], cim_namespace: str) -> None:  # NOSONAR
+def setup(
+    output_path: str, version: str, cgmes_profile_details: list[dict], namespaces: dict[str, str]
+) -> None:  # NOSONAR
     source_dir = Path(__file__).parent
     dest_dir = Path(output_path)
     for file in dest_dir.glob("**/*.java"):
@@ -23,12 +25,14 @@ def setup(output_path: str, cgmes_profile_details: list[dict], cim_namespace: st
         dest_file = dest_dir / file.relative_to(source_dir)
         dest_file.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(file, dest_file)
+    _create_constants(dest_dir, version, namespaces)
 
 
 # These are the files that are used to generate the java files.
 class_template_file = {"filename": "class_template.mustache", "ext": ".java"}
 enum_template_file = {"filename": "enum_template.mustache", "ext": ".java"}
 classlist_template = {"filename": "classlist_template.mustache", "ext": ".java"}
+constants_template_file = {"filename": "constants_template.mustache", "ext": ".java"}
 
 partials = {
     "label_without_keyword": "{{#lang_pack.label_without_keyword}}{{label}}{{/lang_pack.label_without_keyword}}",
@@ -88,6 +92,13 @@ def _write_templated_file(class_file: Path, class_details: dict, template_filena
             }
             output = chevron.render(**args)
         file.write(output)
+
+
+def _create_constants(output_path: Path, version: str, namespaces: dict[str, str]) -> None:
+    class_file = output_path / ("CimConstants" + constants_template_file["ext"])
+    namespaces_list = [{"ns": ns, "uri": uri} for ns, uri in sorted(namespaces.items())]
+    class_details = {"version": version, "namespaces": namespaces_list}
+    _write_templated_file(class_file, class_details, constants_template_file["filename"])
 
 
 # This function just allows us to avoid declaring a variable called 'switch',
@@ -214,6 +225,7 @@ class_blacklist = [
     "CimModel",
     "CimModelService",
     "CimClassMap",
+    "CimConstants",
     "Logging",
 ]
 

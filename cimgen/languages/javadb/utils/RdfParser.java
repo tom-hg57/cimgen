@@ -11,12 +11,14 @@ import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
+import cim4jdb.CimConstants;
+
 /**
  * Read RDF files into a map of rdfid to CIM object.
  */
 public final class RdfParser {
 
-    private static final String RDF_NAMESPACE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+    private static final String RDF = CimConstants.NAMESPACES_MAP.get("rdf");
 
     /**
      * Parse the CIM data from a stream.
@@ -34,7 +36,7 @@ public final class RdfParser {
 
             // Check if root element has RDF namespace
             parser.nextTag();
-            if (!parser.getName().getNamespaceURI().equals(RDF_NAMESPACE)) {
+            if (!parser.getName().getNamespaceURI().equals(RDF)) {
                 throw new RuntimeException("No RDF data");
             }
 
@@ -92,7 +94,7 @@ public final class RdfParser {
     private static String getIdOrAbout(XMLStreamReader parser) {
         for (int idx = 0; idx < parser.getAttributeCount(); ++idx) {
             var name = parser.getAttributeName(idx);
-            if (name.getNamespaceURI().equals(RDF_NAMESPACE)) {
+            if (name.getNamespaceURI().equals(RDF)) {
                 var value = parser.getAttributeValue(idx);
                 var local = name.getLocalPart();
                 if (local.equals("ID")) {
@@ -112,7 +114,7 @@ public final class RdfParser {
     private static String getResource(XMLStreamReader parser) {
         for (int idx = 0; idx < parser.getAttributeCount(); ++idx) {
             var name = parser.getAttributeName(idx);
-            if (name.getNamespaceURI().equals(RDF_NAMESPACE) && name.getLocalPart().equals("resource")) {
+            if (name.getNamespaceURI().equals(RDF) && name.getLocalPart().equals("resource")) {
                 var value = parser.getAttributeValue(idx);
                 if (value.startsWith("#")) {
                     value = value.substring(1);
