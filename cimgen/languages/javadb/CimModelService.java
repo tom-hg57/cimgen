@@ -1,7 +1,5 @@
 package cim4jdb;
 
-import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -21,6 +19,8 @@ import de.psi.cimarchive.utils.ZipFileUtils;
 @Service
 @Transactional
 public class CimModelService {
+
+    private static final Logging LOG = Logging.getLogger(CimModelService.class);
 
     @Autowired
     private CimModel.Repository cimModelRepository;
@@ -59,20 +59,17 @@ public class CimModelService {
     public CimModel saveCimModel(CimModel model, byte[] zipData) {
         model = cimModelRepository.save(model);
         var cimFileAsStringList = ZipFileUtils.extractCimFilesFromZipFile(zipData);
-        for (var cimString : cimFileAsStringList) {
-            try (var stream = new ByteArrayInputStream(cimString.getBytes(StandardCharsets.UTF_8))) {
-                var map = RdfReader.read(stream);
-                saveCimObjects(map.values(), model);
-            } catch (Exception ex) {
-                String txt = "Error while reading zip data";
-                // LOG.error(txt, ex);
-                throw new RuntimeException(txt, ex);
-            }
+        try {
+            var map = RdfReader.readFromStrings(cimFileAsStringList);
+            saveCimObjects(map.values(), model);
+        } catch (Exception ex) {
+            String txt = "Error while reading zip data";
+            LOG.error(txt, ex);
+            throw new RuntimeException(txt, ex);
         }
-        // LOG.debug(...);
         for (var entry : getCimObjectInfos(model.getCimModelId()).entrySet()) {
-            System.out.println(String.format("Object in CIM model %d: id=%d type=%s", model.getCimModelId(),
-                    entry.getKey(), entry.getValue()));
+            LOG.debug(String.format("Object in CIM model %d: id=%d type=%s", model.getCimModelId(), entry.getKey(),
+                    entry.getValue()));
         }
         return model;
     }
