@@ -117,4 +117,17 @@ public class CimModelService {
         }
         return model;
     }
+
+    /**
+     * Deletes the model and all CIM objects that match the specified cimModelId
+     * from the database.
+     *
+     * @param cimModelId ID of a CIM model
+     */
+    public void deleteCimModel(Long cimModelId) {
+        for (var id_and_type : getCimObjectInfos(cimModelId).entrySet()) {
+            cimClassMap.deleteCimObject(id_and_type.getValue(), id_and_type.getKey());
+        }
+        cimModelRepository.deleteById(cimModelId);
+    }
 }

@@ -7,6 +7,7 @@ package cim4jdb;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -108,6 +109,28 @@ public final class CimClassMap {
     }
 
     /**
+     * Deletes a CIM object from the database.
+     *
+     * @param className The class name of the CIM object.
+     * @param id        The ID of the CIM object.
+     */
+    public void deleteCimObject(String className, Long id) {
+        var deleteFunction = DELETE_MAP.get(className);
+        deleteFunction.accept(id);
+    }
+
+    /**
+     * Deletes a CIM object from the database (as object of the correct class).
+     *
+     * @param className The class name of the CIM object.
+     * @param id        The ID of the CIM object.
+     */
+    public <T extends BaseClass> void deleteCimObject(Class<T> clazz, Long id) {
+        var className = clazz.getSimpleName();
+        deleteCimObject(className, id);
+    }
+
+    /**
      * Map of CIM class name to supplier function which creates a new CIM object.
      */
     private static final Map<String, Supplier<BaseClass>> CREATE_MAP;
@@ -154,5 +177,19 @@ public final class CimClassMap {
 {{/classes}}
 
         READ_MAP = Collections.unmodifiableMap(map);
+    }
+
+    /**
+     * Map of CIM class name to function which deletes a CIM object from the database.
+     */
+    private final Map<String, Consumer<Long>> DELETE_MAP;
+    {
+        var map = new LinkedHashMap<String, Consumer<Long>>();
+
+{{#classes}}
+        map.put("{{.}}", id -> repo{{.}}.deleteById(id));
+{{/classes}}
+
+        DELETE_MAP = Collections.unmodifiableMap(map);
     }
 }
