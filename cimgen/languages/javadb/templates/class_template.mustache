@@ -4,7 +4,9 @@ Generated from the CGMES files via cimgen: https://github.com/sogno-platform/cim
 
 package cim4jdb;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -34,6 +36,9 @@ import org.springframework.data.repository.CrudRepository;
 {{/special_table_name}}
 public class {{class_name}} extends {{subclass_of}} {
 
+    private static final Logging LOG = Logging.getLogger({{class_name}}.class);
+    private static final String CLASS_NAMESPACE = "{{class_namespace}}";
+
     /**
      * Default constructor.
      */
@@ -60,7 +65,7 @@ public class {{class_name}} extends {{subclass_of}} {
     private {{primitive_java_type}} {{> label_without_keyword}}; // {{attribute_class}}
 
     public String {{label}}ToString() {
-        return {{> label_without_keyword}}.toString();
+        return {{> label_without_keyword}} != null ? {{> label_without_keyword}}.toString() : null;
     }
 
     public void {{label}}FromString(String stringValue) {
@@ -71,7 +76,7 @@ public class {{class_name}} extends {{subclass_of}} {
     private {{attribute_class}} {{> label_without_keyword}};
 
     public String {{label}}ToString() {
-        return {{> label_without_keyword}}.toString();
+        return {{> label_without_keyword}} != null ? {{> label_without_keyword}}.toString() : null;
     }
 
     public void {{label}}FromString(String stringValue) {
@@ -86,7 +91,7 @@ public class {{class_name}} extends {{subclass_of}} {
     private Double {{label}}; // {{attribute_class}}
 
     public String {{label}}ToString() {
-        return {{label}}.toString();
+        return {{label}} != null ? {{label}}.toString() : null;
     }
 
     public void {{label}}FromString(String stringValue) {
@@ -187,21 +192,23 @@ public class {{class_name}} extends {{subclass_of}} {
     }
 
     /**
-     * Get a set of all attribute names of the CIM type.
+     * Get a list of all attribute names of the CIM type.
      *
-     * The set includes all inherited attributes. The attribute name is only the
+     * The list includes all inherited attributes. The attribute name is only the
      * last part of the full name (without the class name).
      *
      * @return All attributes of the CIM type
      */
     @Override
-    public Set<String> getAttributeNames() {
-        return ATTR_DETAILS_MAP.keySet();
+    public List<String> getAttributeNames() {
+        return ATTR_NAMES_LIST;
     }
 
+    private static final List<String> ATTR_NAMES_LIST;
     private static final Map<String, AttrDetails> ATTR_DETAILS_MAP;
     static {
         ATTR_DETAILS_MAP = new {{class_name}}().allAttrDetailsMap();
+        ATTR_NAMES_LIST = new ArrayList<>(ATTR_DETAILS_MAP.keySet());
     }
 
     @Override
@@ -213,24 +220,28 @@ public class {{class_name}} extends {{subclass_of}} {
     }
 
     @Transient
-    private Map<String, AttrDetails> classAttrDetailsMap = Map.ofEntries(
+    private final Map<String, AttrDetails> classAttrDetailsMap = fillClassAttrDetailsMap();
+
+    private Map<String, AttrDetails> fillClassAttrDetailsMap() {
+        Map<String, AttrDetails> map = new LinkedHashMap<>();
 {{#attributes}}
 {{#is_really_used}}
 {{#is_primitive_attribute}}
-            Map.entry("{{label}}", new AttrDetails("{{class_name}}.{{label}}", this::{{label}}ToString, this::{{label}}FromString, true, false, true)),
+        map.put("{{label}}", new AttrDetails("{{class_name}}.{{label}}", this::{{label}}ToString, this::{{label}}FromString, true, false, true, "{{attribute_namespace}}"));
 {{/is_primitive_attribute}}
 {{#is_datatype_attribute}}
-            Map.entry("{{label}}", new AttrDetails("{{class_name}}.{{label}}", this::{{label}}ToString, this::{{label}}FromString, true, false, true)),
+        map.put("{{label}}", new AttrDetails("{{class_name}}.{{label}}", this::{{label}}ToString, this::{{label}}FromString, true, false, true, "{{attribute_namespace}}"));
 {{/is_datatype_attribute}}
 {{#is_enum_attribute}}
-            Map.entry("{{label}}", new AttrDetails("{{class_name}}.{{label}}", this::{{label}}ToString, this::{{label}}FromString, false, true, true)),
+        map.put("{{label}}", new AttrDetails("{{class_name}}.{{label}}", this::{{label}}ToString, this::{{label}}FromString, false, true, true, "{{attribute_namespace}}"));
 {{/is_enum_attribute}}
 {{#is_class_attribute}}
-            Map.entry("{{label}}", new AttrDetails("{{class_name}}.{{label}}", this::{{label}}ToString, this::{{label}}FromString, false, false, true)),
+        map.put("{{label}}", new AttrDetails("{{class_name}}.{{label}}", this::{{label}}ToString, this::{{label}}FromString, false, false, true, "{{attribute_namespace}}"));
 {{/is_class_attribute}}
 {{/is_really_used}}
 {{/attributes}}
-            Map.entry("LAST_ATTRIBUTE", new AttrDetails()));
+        return map;
+    }
 
     /**
      * Get the full name of an attribute.
@@ -242,7 +253,7 @@ public class {{class_name}} extends {{subclass_of}} {
      */
     @Override
     public String getAttributeFullName(String attrName) {
-        return ATTR_DETAILS_MAP.get(attrName).fullName;
+        return ATTR_DETAILS_MAP.containsKey(attrName) ? ATTR_DETAILS_MAP.get(attrName).fullName : null;
     }
 
     /**
@@ -324,5 +335,25 @@ public class {{class_name}} extends {{subclass_of}} {
     @Override
     public boolean isUsedAttribute(String attrName) {
         return ATTR_DETAILS_MAP.containsKey(attrName) && ATTR_DETAILS_MAP.get(attrName).isUsed;
+    }
+
+    /**
+     * Get the namespace URL of an object of this class.
+     *
+     * @return The namespace URL
+     */
+    @Override
+    public String getClassNamespaceUrl() {
+        return CLASS_NAMESPACE;
+    }
+
+    /**
+     * Get the namespace URL of an attribute (also for inherited attributes).
+     *
+     * @return The namespace URL
+     */
+    @Override
+    public String getAttributeNamespaceUrl(String attrName) {
+        return ATTR_DETAILS_MAP.containsKey(attrName) ? ATTR_DETAILS_MAP.get(attrName).nameSpace : null;
     }
 }

@@ -1,8 +1,8 @@
 package cim4jdb;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -94,7 +94,7 @@ public class CimModelService {
      * @return        The list of saved CIM objects.
      */
     public List<BaseClass> saveCimObjects(Iterable<BaseClass> objList, CimModel model) {
-        var list = new LinkedList<BaseClass>();
+        var list = new ArrayList<BaseClass>();
         for (BaseClass obj : objList) {
             obj.setCimModel(model);
             obj = cimClassMap.saveCimObject(obj.getClass(), obj);

@@ -3,7 +3,6 @@ package cim4jdb;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -87,7 +86,15 @@ public abstract class BaseClass {
      *
      * @return All attributes of the CIM type
      */
-    public abstract Set<String> getAttributeNames();
+    /**
+     * Get a list of all attribute names of the CIM type.
+     *
+     * The list includes all inherited attributes. The attribute name is only the
+     * last part of the full name (without the class name).
+     *
+     * @return All attributes of the CIM type
+     */
+    public abstract List<String> getAttributeNames();
 
     protected Map<String, AttrDetails> allAttrDetailsMap() {
         Map<String, AttrDetails> map = new LinkedHashMap<>();
@@ -162,6 +169,20 @@ public abstract class BaseClass {
     public abstract boolean isUsedAttribute(String attrName);
 
     /**
+     * Get the namespace URL of an object of this class.
+     *
+     * @return The namespace URL
+     */
+    public abstract String getClassNamespaceUrl();
+
+    /**
+     * Get the namespace URL of an attribute (also for inherited attributes).
+     *
+     * @return The namespace URL
+     */
+    public abstract String getAttributeNamespaceUrl(String attrName);
+
+    /**
      * Helper functions.
      */
 
@@ -207,13 +228,15 @@ public abstract class BaseClass {
         public AttrDetails() {
         }
 
-        public AttrDetails(String f, Supplier<String> g, Consumer<String> s, boolean p, boolean e, boolean u) {
+        public AttrDetails(String f, Supplier<String> g, Consumer<String> s, boolean p, boolean e, boolean u,
+                String n) {
             fullName = f;
             getter = g;
             setter = s;
             isPrimitive = p;
             isEnum = e;
             isUsed = u;
+            nameSpace = n;
         }
 
         public String fullName;
@@ -222,5 +245,6 @@ public abstract class BaseClass {
         public Boolean isPrimitive;
         public Boolean isEnum;
         public boolean isUsed;
+        public String nameSpace;
     }
 }
