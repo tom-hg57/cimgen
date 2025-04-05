@@ -129,9 +129,11 @@ public class RdfWriter {
                                 writer.writeEmptyElement(namespaceUrl, attrFullName);
                                 writer.writeAttribute(RDF, "resource", attr);
                             } else {
-                                writer.writeCharacters("\n    ");
-                                writer.writeEmptyElement(namespaceUrl, attrFullName);
-                                writer.writeAttribute(RDF, "resource", "#" + attr);
+                                for (var reference : attr.split(" ")) {
+                                    writer.writeCharacters("\n    ");
+                                    writer.writeEmptyElement(namespaceUrl, attrFullName);
+                                    writer.writeAttribute(RDF, "resource", "#" + reference);
+                                }
                             }
                         }
                     }

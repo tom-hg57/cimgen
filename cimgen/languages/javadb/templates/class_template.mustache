@@ -5,6 +5,7 @@ Generated from the CGMES files via cimgen: https://github.com/sogno-platform/cim
 package cim4jdb;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,8 +18,9 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 
-import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 
 import org.springframework.data.repository.CrudRepository;
 
@@ -27,9 +29,7 @@ import org.springframework.data.repository.CrudRepository;
  * {{{class_comment}}}
  */
 {{/class_comment}}
-@Data
 @Entity
-@EqualsAndHashCode(callSuper = true)
 @SuppressWarnings("unused")
 {{#special_table_name}}
 @Table(name = "{{special_table_name}}")
@@ -47,21 +47,31 @@ public class {{class_name}} extends {{subclass_of}} {
     }
 {{#attributes}}
 
-{{#is_really_used}}
-{{#comment}}
     /**
+{{#comment}}
      * {{comment}}
+{{/comment}}
+{{#is_really_used}}
 {{^is_used}}
      *
      * (shouldn't have used, but is class attribute with inverse list)
 {{/is_used}}
+{{/is_really_used}}
+{{^is_really_used}}
+     *
+     * NOT USED
+{{#is_used}}
+     * (should have used, but is list attribute)
+{{/is_used}}
+{{/is_really_used}}
      */
-{{/comment}}
 {{#is_primitive_attribute}}
 {{#special_column_name}}
     @Column(name = "{{special_column_name}}")
 {{/special_column_name}}
 {{#primitive_java_type}}
+    @Getter
+    @Setter
     private {{primitive_java_type}} {{> label_without_keyword}}; // {{attribute_class}}
 
     public String {{label}}ToString() {
@@ -73,6 +83,8 @@ public class {{class_name}} extends {{subclass_of}} {
     }
 {{/primitive_java_type}}
 {{^primitive_java_type}}
+    @Getter
+    @Setter
     private {{attribute_class}} {{> label_without_keyword}};
 
     public String {{label}}ToString() {
@@ -88,6 +100,8 @@ public class {{class_name}} extends {{subclass_of}} {
 {{#special_column_name}}
     @Column(name = "{{special_column_name}}")
 {{/special_column_name}}
+    @Getter
+    @Setter
     private Double {{label}}; // {{attribute_class}}
 
     public String {{label}}ToString() {
@@ -102,6 +116,8 @@ public class {{class_name}} extends {{subclass_of}} {
 {{#special_column_name}}
     @Column(name = "{{special_column_name}}")
 {{/special_column_name}}
+    @Getter
+    @Setter
     private String {{label}}; // {{attribute_class}}
 
     public String {{label}}ToString() {
@@ -113,76 +129,69 @@ public class {{class_name}} extends {{subclass_of}} {
     }
 {{/is_enum_attribute}}
 {{#is_class_attribute}}
+    @Getter
+    @Transient
 {{#is_class_attribute_with_inverse_list}}
-    private String {{label}}; // ManyToOne {{attribute_class}}
-
-    public String {{label}}ToString() {
-        return {{label}};
-    }
-
-    public void {{label}}FromString(String stringValue) {
-        {{label}} = stringValue;
-    }
+    private {{attribute_class}} {{label}}; // ManyToOne
 {{/is_class_attribute_with_inverse_list}}
 {{^is_class_attribute_with_inverse_list}}
-    private String {{label}}; // OneToOne {{attribute_class}}
+    private {{attribute_class}} {{label}}; // OneToOne
+{{/is_class_attribute_with_inverse_list}}
+
+    public void {{label}}FromObject(BaseClass obj) {
+        if (!(obj instanceof {{attribute_class}})) {
+            throw new IllegalArgumentException("Object is not {{attribute_class}}");
+        }
+        if ({{label}} != obj) {
+            {{label}} = ({{attribute_class}}) obj;
+{{#inverse_label}}
+            {{label}}.{{.}}FromObject(this);
+{{/inverse_label}}
+{{#is_really_used}}
+            {{label}}Id = {{label}}.getRdfid();
+{{/is_really_used}}
+        }
+    }
+
+{{#is_really_used}}
+    @Getter
+    private String {{label}}Id; // save to database
 
     public String {{label}}ToString() {
-        return {{label}};
+        return {{label}}Id;
     }
-
-    public void {{label}}FromString(String stringValue) {
-        {{label}} = stringValue;
-    }
-{{/is_class_attribute_with_inverse_list}}
-{{/is_class_attribute}}
 {{/is_really_used}}
 {{^is_really_used}}
-    /**
-{{#comment}}
-     * {{comment}}
-{{/comment}}
-     *
-     * NOT USED
-{{#is_primitive_attribute}}
-{{#special_column_name}}
-    * @Column(name = "{{special_column_name}}")
-{{/special_column_name}}
-{{#primitive_java_type}}
-     * private {{primitive_java_type}} {{> label_without_keyword}}; // {{attribute_class}}
-{{/primitive_java_type}}
-{{^primitive_java_type}}
-     * private {{attribute_class}} {{> label_without_keyword}};
-{{/primitive_java_type}}
-{{/is_primitive_attribute}}
-{{#is_datatype_attribute}}
-{{#special_column_name}}
-     * @Column(name = "{{special_column_name}}")
-{{/special_column_name}}
-     * private Double {{label}}; // {{attribute_class}}
-{{/is_datatype_attribute}}
-{{#is_enum_attribute}}
-{{#special_column_name}}
-     * @Column(name = "{{special_column_name}}")
-{{/special_column_name}}
-     * private String {{label}}; // {{attribute_class}}
-{{/is_enum_attribute}}
-{{#is_class_attribute}}
-{{#is_class_attribute_with_inverse_list}}
-     * private String {{label}}; // ManyToOne {{attribute_class}}
-{{/is_class_attribute_with_inverse_list}}
-{{^is_class_attribute_with_inverse_list}}
-     * private String {{label}}; // OneToOne {{attribute_class}}
-{{/is_class_attribute_with_inverse_list}}
+    public String {{label}}ToString() {
+        return {{label}} != null ? {{label}}.getRdfid() : null;
+    }
+{{/is_really_used}}
 {{/is_class_attribute}}
 {{#is_list_attribute}}
-{{#is_used}}
-     * (should have used, but is list attribute)
-{{/is_used}}
-     * private Set<String> {{label}} = new HashSet<>(); // OneToMany Set<{{attribute_class}}>
+    @Getter
+    @Transient
+    private Set<{{attribute_class}}> {{label}} = new HashSet<>(); // OneToMany
+
+    public void {{label}}FromObject(BaseClass obj) {
+        if (!(obj instanceof {{attribute_class}})) {
+            throw new IllegalArgumentException("Object is not {{attribute_class}}");
+        }
+        if (!{{label}}.contains(obj)) {
+            {{label}}.add(({{attribute_class}}) obj);
+{{#inverse_label}}
+            (({{attribute_class}}) obj).{{.}}FromObject(this);
+{{/inverse_label}}
+        }
+    }
+
+    public String {{label}}ToString() {
+        String references = "";
+        for (var obj : {{label}}) {
+            references += obj.getRdfid() + " ";
+        }
+        return references.trim();
+    }
 {{/is_list_attribute}}
-     */
-{{/is_really_used}}
 {{/attributes}}
 
     /**
@@ -225,20 +234,31 @@ public class {{class_name}} extends {{subclass_of}} {
     private Map<String, AttrDetails> fillClassAttrDetailsMap() {
         Map<String, AttrDetails> map = new LinkedHashMap<>();
 {{#attributes}}
-{{#is_really_used}}
 {{#is_primitive_attribute}}
-        map.put("{{label}}", new AttrDetails("{{class_name}}.{{label}}", this::{{label}}ToString, this::{{label}}FromString, true, false, true, "{{attribute_namespace}}"));
+        map.put("{{label}}", new AttrDetails("{{class_name}}.{{label}}", this::{{label}}ToString, this::{{label}}FromString, true, "{{attribute_namespace}}", true, false));
 {{/is_primitive_attribute}}
 {{#is_datatype_attribute}}
-        map.put("{{label}}", new AttrDetails("{{class_name}}.{{label}}", this::{{label}}ToString, this::{{label}}FromString, true, false, true, "{{attribute_namespace}}"));
+        map.put("{{label}}", new AttrDetails("{{class_name}}.{{label}}", this::{{label}}ToString, this::{{label}}FromString, true, "{{attribute_namespace}}", true, false));
 {{/is_datatype_attribute}}
 {{#is_enum_attribute}}
-        map.put("{{label}}", new AttrDetails("{{class_name}}.{{label}}", this::{{label}}ToString, this::{{label}}FromString, false, true, true, "{{attribute_namespace}}"));
+        map.put("{{label}}", new AttrDetails("{{class_name}}.{{label}}", this::{{label}}ToString, this::{{label}}FromString, true, "{{attribute_namespace}}", false, true));
 {{/is_enum_attribute}}
 {{#is_class_attribute}}
-        map.put("{{label}}", new AttrDetails("{{class_name}}.{{label}}", this::{{label}}ToString, this::{{label}}FromString, false, false, true, "{{attribute_namespace}}"));
+{{#is_used}}
+        map.put("{{label}}", new AttrDetails("{{class_name}}.{{label}}", this::{{label}}ToString, this::{{label}}FromObject, true, "{{attribute_namespace}}"));
+{{/is_used}}
+{{^is_used}}
+        map.put("{{label}}", new AttrDetails("{{class_name}}.{{label}}", this::{{label}}ToString, this::{{label}}FromObject, false, "{{attribute_namespace}}"));
+{{/is_used}}
 {{/is_class_attribute}}
-{{/is_really_used}}
+{{#is_list_attribute}}
+{{#is_used}}
+        map.put("{{label}}", new AttrDetails("{{class_name}}.{{label}}", this::{{label}}ToString, this::{{label}}FromObject, true, "{{attribute_namespace}}"));
+{{/is_used}}
+{{^is_used}}
+        map.put("{{label}}", new AttrDetails("{{class_name}}.{{label}}", this::{{label}}ToString, this::{{label}}FromObject, false, "{{attribute_namespace}}"));
+{{/is_used}}
+{{/is_list_attribute}}
 {{/attributes}}
         return map;
     }
@@ -276,8 +296,30 @@ public class {{class_name}} extends {{subclass_of}} {
         return super.getAttribute(className, attrName);
     }
 
+
     /**
-     * Set an attribute value.
+     * Set an attribute value as object (for class and list attributes).
+     *
+     * @param attrName    The attribute name
+     * @param objectValue The attribute value as object
+     */
+    @Override
+    public void setAttribute(String attrName, BaseClass objectValue) {
+        setAttribute("{{class_name}}", attrName, objectValue);
+    }
+
+    @Override
+    protected void setAttribute(String className, String attrName, BaseClass objectValue) {
+        if (classAttrDetailsMap.containsKey(attrName)) {
+            var setterFunction = classAttrDetailsMap.get(attrName).objectSetter;
+            setterFunction.accept(objectValue);
+        } else {
+            setAttribute(className, attrName, objectValue.getRdfid());
+        }
+    }
+
+    /**
+     * Set an attribute value as string (for primitive (including datatype) and enum attributes).
      *
      * @param attrName    The attribute name
      * @param stringValue The attribute value as string
@@ -290,7 +332,7 @@ public class {{class_name}} extends {{subclass_of}} {
     @Override
     protected void setAttribute(String className, String attrName, String stringValue) {
         if (classAttrDetailsMap.containsKey(attrName)) {
-            var setterFunction = classAttrDetailsMap.get(attrName).setter;
+            var setterFunction = classAttrDetailsMap.get(attrName).stringSetter;
             setterFunction.accept(stringValue);
         } else {
             super.setAttribute(className, attrName, stringValue);

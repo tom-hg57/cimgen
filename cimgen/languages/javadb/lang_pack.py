@@ -57,6 +57,10 @@ def run_template(output_path: str, class_details: dict) -> None:
 
     # Add some attribute infos
     for attribute in class_details["attributes"]:
+        attribute["attribute_is_primitive_string"] = _attribute_is_primitive_string(attribute) and "true" or ""
+
+    # Add some attribute infos
+    for attribute in class_details["attributes"]:
         if _attribute_is_primitive_string(attribute) and attribute["attribute_class"] != "String":
             attribute["primitive_java_type"] = "String"
         elif attribute["attribute_class"] == "Decimal":
@@ -65,6 +69,10 @@ def run_template(output_path: str, class_details: dict) -> None:
         if special_column_name:
             attribute["special_column_name"] = special_column_name
         attribute["is_really_used"] = "true" if _attribute_is_really_used(attribute) else ""
+        if "inverse_role" in attribute:
+            attribute["inverse_label"] = [attribute["inverse_role"].split(".")[1]]
+        else:
+            attribute["inverse_label"] = []
 
     if _filter_cim_classes(class_details):
         return

@@ -16,6 +16,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
@@ -36,6 +37,7 @@ import org.springframework.data.repository.CrudRepository;
  */
 @Data
 @Entity
+@EqualsAndHashCode(of = {"cimModel", "rdfid"})
 @Inheritance(strategy = InheritanceType.JOINED)
 public abstract class BaseClass {
 
@@ -79,14 +81,6 @@ public abstract class BaseClass {
     }
 
     /**
-     * Get a set of all attribute names of the CIM type.
-     *
-     * The set includes all inherited attributes. The attribute name is only the
-     * last part of the full name (without the class name).
-     *
-     * @return All attributes of the CIM type
-     */
-    /**
      * Get a list of all attribute names of the CIM type.
      *
      * The list includes all inherited attributes. The attribute name is only the
@@ -125,7 +119,20 @@ public abstract class BaseClass {
     }
 
     /**
-     * Set an attribute value.
+     * Set an attribute value as object (for class and list attributes).
+     *
+     * @param attrName    The attribute name
+     * @param objectValue The attribute value as object
+     */
+    public abstract void setAttribute(String attrName, BaseClass objectValue);
+
+    protected void setAttribute(String className, String attrName, BaseClass objectValue) {
+        LOG.error(String.format("No-one knows what to do with attribute %s.%s and value %s", className, attrName,
+                objectValue));
+    }
+
+    /**
+     * Set an attribute value as string (for primitive (including datatype) and enum attributes).
      *
      * @param attrName    The attribute name
      * @param stringValue The attribute value as string
@@ -228,23 +235,36 @@ public abstract class BaseClass {
         public AttrDetails() {
         }
 
-        public AttrDetails(String f, Supplier<String> g, Consumer<String> s, boolean p, boolean e, boolean u,
-                String n) {
+        public AttrDetails(String f, Supplier<String> g, Consumer<BaseClass> o, boolean u, String n) {
             fullName = f;
             getter = g;
-            setter = s;
-            isPrimitive = p;
-            isEnum = e;
+            objectSetter = o;
+            stringSetter = null;
             isUsed = u;
             nameSpace = n;
+            isPrimitive = false;
+            isEnum = false;
+        }
+
+        public AttrDetails(String f, Supplier<String> g, Consumer<String> s, boolean u, String n, boolean p,
+                boolean e) {
+            fullName = f;
+            getter = g;
+            objectSetter = null;
+            stringSetter = s;
+            isUsed = u;
+            nameSpace = n;
+            isPrimitive = p;
+            isEnum = e;
         }
 
         public String fullName;
         public Supplier<String> getter;
-        public Consumer<String> setter;
-        public Boolean isPrimitive;
-        public Boolean isEnum;
+        public Consumer<BaseClass> objectSetter;
+        public Consumer<String> stringSetter;
         public boolean isUsed;
         public String nameSpace;
+        public Boolean isPrimitive;
+        public Boolean isEnum;
     }
 }

@@ -105,7 +105,7 @@ public final class RdfReader {
                 if (model.containsKey(attribute.resource)) {
                     // Set class attribute as link to an already existng object
                     BaseClass attributeObject = model.get(attribute.resource);
-                    object.setAttribute(attributeName, attributeObject.getRdfid());
+                    object.setAttribute(attributeName, attributeObject);
                 } else {
                     // Set attribute later in setRemainingAttributes
                     var setAttribute = new SetAttribute(attributeName, object);
@@ -130,7 +130,7 @@ public final class RdfReader {
                 model.put(resource, attributeObject);
             }
             for (var setAttribute : setAttributeList) {
-                setAttribute.object.setAttribute(setAttribute.name, attributeObject.getRdfid());
+                setAttribute.object.setAttribute(setAttribute.name, attributeObject);
             }
         }
     }
