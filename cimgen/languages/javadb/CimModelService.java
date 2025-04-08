@@ -104,16 +104,48 @@ public class CimModelService {
     }
 
     /**
-     * Reads all CIM objects that match the specified cimModelId from the database.
+     * Reads all CIM objects that match the specified cimModelId from the database,
+     * linking the CIM objects after reading.
      *
      * @param cimModelId ID of a CIM model
      * @return           CIM objects of this model
      */
     public Map<String, BaseClass> readCimObjects(Long cimModelId) {
+        return readCimObjects(cimModelId, true);
+    }
+
+    /**
+     * Reads all CIM objects that match the specified cimModelId from the database,
+     * with or without linking the CIM objects after reading.
+     *
+     * @param cimModelId      ID of a CIM model
+     * @param linkCimObjects  Enable/disable linking CIM object attributes
+     * @return                CIM objects of this model
+     */
+    public Map<String, BaseClass> readCimObjects(Long cimModelId, boolean linkCimObjects) {
         var model = new LinkedHashMap<String, BaseClass>();
         for (var id_and_type : getCimObjectInfos(cimModelId).entrySet()) {
             var obj = cimClassMap.readCimObject(id_and_type.getValue(), id_and_type.getKey());
             model.put(obj.getRdfid(), obj);
+        }
+        if (linkCimObjects) {
+            for (var obj : model.values()) {
+                var attrNames = obj.getAttributeNames();
+                for (String attrName : attrNames) {
+                    String attr = obj.getAttribute(attrName);
+                    if (attr != null && !obj.isPrimitiveAttribute(attrName) && !obj.isEnumAttribute(attrName)) {
+                        var linkedObj = model.get(attr);
+                        if (linkedObj != null) {
+                            try {
+                                obj.setAttribute(attrName, linkedObj);
+                            } catch (Exception ex) {
+                                LOG.error(String.format("Error while linking attribute %s.%s for rdfid %s",
+                                        obj.getCimType(), attrName, obj.getRdfid()), ex);
+                            }
+                        }
+                    }
+                }
+            }
         }
         return model;
     }
