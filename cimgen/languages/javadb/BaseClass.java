@@ -3,6 +3,7 @@ package cim4jdb;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -14,9 +15,6 @@ import jakarta.persistence.Inheritance;
 import jakarta.persistence.InheritanceType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-
-import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
@@ -35,9 +33,7 @@ import org.springframework.data.repository.CrudRepository;
  * BaseClass. To read or write a CIM object the repository of this subclass
  * should be used.
  */
-@Data
 @Entity
-@EqualsAndHashCode(of = {"cimModel", "rdfid"})
 @Inheritance(strategy = InheritanceType.JOINED)
 public abstract class BaseClass {
 
@@ -47,19 +43,88 @@ public abstract class BaseClass {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
     @ManyToOne(optional = false)
     @JoinColumn(name = "cim_model_id", referencedColumnName = "cim_model_id")
     private CimModel cimModel;
+
+    public CimModel getCimModel() {
+        return cimModel;
+    }
+
+    public void setCimModel(CimModel cimModel) {
+        this.cimModel = cimModel;
+    }
 
     /**
      * The name of the CIM type.
      */
     private String cimType;
 
+    public String getCimType() {
+        return cimType;
+    }
+
+    public void setCimType(String cimType) {
+        this.cimType = cimType;
+    }
+
     /**
      * The RDF ID of the CIM object read from rdf:ID or rdf:about.
      */
     private String rdfid;
+
+    public String getRdfid() {
+        return rdfid;
+    }
+
+    public void setRdfid(String rdfid) {
+        this.rdfid = rdfid;
+    }
+
+    /**
+     * Indicates whether some other object is "equal to" this one.
+     *
+     * @param obj  the reference object with which to compare.
+     * @return     true if this object is the same as the obj argument; false otherwise.
+     */
+    @Override
+    public final boolean equals(Object obj) {
+        if (obj == this)
+            return true;
+        if (obj == null || obj.getClass() != getClass())
+            return false;
+        BaseClass other = (BaseClass) obj;
+        if (cimModel == null ? other.cimModel != null : !cimModel.equals(other.cimModel))
+            return false;
+        if (rdfid == null ? other.rdfid != null : !rdfid.equals(other.rdfid))
+            return false;
+        return true;
+    }
+
+    /**
+     * Returns a hash code value for the object.
+     *
+     * This method is supported for the benefit of hash tables such as those
+     * provided by HashMap.
+     *
+     * @return  a hash code value for this object.
+     */
+    @Override
+    public final int hashCode() {
+        final int PRIME = 31;
+        int result = 1;
+        result = (result * PRIME) + (cimModel == null ? 0 : cimModel.hashCode());
+        result = (result * PRIME) + (rdfid == null ? 0 : rdfid.hashCode());
+        return result;
+    }
 
     /**
      * Nested repository. The implementation is automatically created.
@@ -224,8 +289,12 @@ public abstract class BaseClass {
         }
     }
 
-    protected String getStringFromString(String stringValue) {
-        return stringValue;
+    protected String getStringFromSet(Set<? extends BaseClass> set) {
+        String references = "";
+        for (var obj : set) {
+            references += obj.getRdfid() + " ";
+        }
+        return references.trim();
     }
 
     /**

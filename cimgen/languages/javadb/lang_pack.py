@@ -3,7 +3,6 @@ import logging
 import shutil
 from pathlib import Path
 from importlib.resources import files
-from typing import Callable
 
 logger = logging.getLogger(__name__)
 
@@ -34,10 +33,6 @@ enum_template_file = {"filename": "enum_template.mustache", "ext": ".java"}
 classlist_template = {"filename": "classlist_template.mustache", "ext": ".java"}
 constants_template_file = {"filename": "constants_template.mustache", "ext": ".java"}
 
-partials = {
-    "label_without_keyword": "{{#lang_pack.label_without_keyword}}{{label}}{{/lang_pack.label_without_keyword}}",
-}
-
 
 def get_base_class() -> str:
     return "BaseClass"
@@ -51,28 +46,29 @@ def get_class_location(class_name: str, class_map: dict, version: str) -> str:  
 def run_template(output_path: str, class_details: dict) -> None:
 
     # Add some class infos
-    special_table_name = _special_table_name(class_details["class_name"])
-    if special_table_name:
-        class_details["special_table_name"] = special_table_name
+    class_details["table_name"] = _table_name(class_details["class_name"])
 
     # Add some attribute infos
     for attribute in class_details["attributes"]:
-        attribute["attribute_is_primitive_string"] = _attribute_is_primitive_string(attribute) and "true" or ""
-
-    # Add some attribute infos
-    for attribute in class_details["attributes"]:
-        if _attribute_is_primitive_string(attribute) and attribute["attribute_class"] != "String":
-            attribute["primitive_java_type"] = "String"
-        elif attribute["attribute_class"] == "Decimal":
-            attribute["primitive_java_type"] = "Float"
-        special_column_name = _special_column_name(attribute["label"])
-        if special_column_name:
-            attribute["special_column_name"] = special_column_name
+        attribute["is_primitive_string"] = "true" if _attribute_is_primitive_string(attribute) else ""
+        if attribute["is_primitive_attribute"]:
+            if _attribute_is_primitive_string(attribute):
+                attribute["primitive_java_type"] = "String"
+            elif attribute["attribute_class"] == "Decimal":
+                attribute["primitive_java_type"] = "Float"
+            else:
+                attribute["primitive_java_type"] = attribute["attribute_class"]
+        attribute["variable_name"] = _variable_name(attribute["label"])
+        attribute["getter_name"] = _getter_setter_name("get", attribute["label"])
+        attribute["setter_name"] = _getter_setter_name("set", attribute["label"])
+        attribute["column_name"] = _column_name(attribute["label"])
         attribute["is_really_used"] = "true" if _attribute_is_really_used(attribute) else ""
-        if "inverse_role" in attribute:
-            attribute["inverse_label"] = [attribute["inverse_role"].split(".")[1]]
-        else:
-            attribute["inverse_label"] = []
+        if attribute["is_class_attribute"] or attribute["is_list_attribute"]:
+            if "inverse_role" in attribute:
+                inverse_label = attribute["inverse_role"].split(".")[1]
+                attribute["inverse_setter"] = [_getter_setter_name("set", inverse_label)]
+            else:
+                attribute["inverse_setter"] = []
 
     if _filter_cim_classes(class_details):
         return
@@ -96,7 +92,6 @@ def _write_templated_file(class_file: Path, class_details: dict, template_filena
             args = {
                 "data": class_details,
                 "template": f,
-                "partials_dict": partials,
             }
             output = chevron.render(**args)
         file.write(output)
@@ -109,43 +104,60 @@ def _create_constants(output_path: Path, version: str, namespaces: dict[str, str
     _write_templated_file(class_file, class_details, constants_template_file["filename"])
 
 
-# This function just allows us to avoid declaring a variable called 'switch',
-# which is in the definition of the ExcBBC class.
-def label_without_keyword(text: str, render: Callable[[str], str]) -> str:
-    label = render(text)
-    return _get_label_without_keyword(label)
+def _variable_name(label: str) -> str:
+    """Get the name of the label used as variable name.
 
+    Some label names are not allowed as name of a variable.
 
-def _get_label_without_keyword(label: str) -> str:
+    :param label:  Original label
+    :return:       Variable name
+    """
     if label == "switch":
         label += "_"
     return label
 
 
-def _special_table_name(class_name: str) -> str | None:
-    """Get the name of the database table if different from class name.
+def _getter_setter_name(prefix: str, label: str) -> str:
+    """Get the name of the getter/setter function for a label.
+
+    Add "get"/"set" as prefix and change the first character of the label to upper case.
+    Prevent collision of "Name" with "name" in IdentifiedObject, NameType, NamingAuthority.
+
+    :param prefix:  "get"/"set"
+    :param label:   Original label
+    :return:        Name of the getter/setter function
+    """
+    if label[0].islower():
+        label = label[0].upper() + label[1:]
+    elif label == "Name":
+        label = "_" + label
+    return prefix + label
+
+
+def _table_name(class_name: str) -> str:
+    """Get the name of the database table for a class name.
 
     Some class names are not allowed as name of a database table.
 
     :param class_name:  Original class name
-    :return:            Table name or None if no special table name needed
+    :return:            Table name
     """
     if class_name in ("Limit", "Resource"):
-        return class_name + "_"
-    return None
+        class_name += "_"
+    return class_name
 
 
-def _special_column_name(label: str) -> str | None:
-    """Get the name of the database column if different from label.
+def _column_name(label: str) -> str:
+    """Get the name of the database column for a label.
 
     Some label names are not allowed as name of a database column.
 
     :param label:  Original label
-    :return:       Column name or None if no special column name needed
+    :return:       Column name
     """
     if label in ("mode", "number", "order", "value"):
-        return label + "_"
-    return None
+        label += "_"
+    return label
 
 
 def _attribute_is_primitive_string(attribute: dict) -> bool:
