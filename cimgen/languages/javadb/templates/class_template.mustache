@@ -312,7 +312,7 @@ public class {{class_name}} extends {{subclass_of}} {
             var setterFunction = classAttrDetailsMap.get(attrName).objectSetter;
             setterFunction.accept(objectValue);
         } else {
-            setAttribute(className, attrName, objectValue.getRdfid());
+            super.setAttribute(className, attrName, objectValue);
         }
     }
 

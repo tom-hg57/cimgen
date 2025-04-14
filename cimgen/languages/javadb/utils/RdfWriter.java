@@ -71,7 +71,7 @@ public class RdfWriter {
     /**
      * Write the CIM data to a stream.
      *
-     * @return cim data as rdf string
+     * @param streamWriter Writer to an output stream
      */
     public void write(Writer streamWriter) {
         final String RDF = CimConstants.NAMESPACES_MAP.get("rdf");
