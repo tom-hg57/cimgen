@@ -125,12 +125,12 @@ public final class RdfReader {
         for (var resource : setAttributeMap.keySet()) {
             var setAttributeList = setAttributeMap.get(resource);
             BaseClass attributeObject = model.get(resource);
-            if (attributeObject == null) {
-                attributeObject = createNewObject("IdentifiedObject", resource);
-                model.put(resource, attributeObject);
-            }
-            for (var setAttribute : setAttributeList) {
-                setAttribute.object.setAttribute(setAttribute.name, attributeObject);
+            if (attributeObject != null) {
+                for (var setAttribute : setAttributeList) {
+                    setAttribute.object.setAttribute(setAttribute.name, attributeObject);
+                }
+            } else {
+                LOG.warn(String.format("Cannot find object with rdf:ID: %s", resource));
             }
         }
     }
