@@ -153,8 +153,8 @@ public class RdfWriter {
         }
     }
 
-    private Map<java.lang.String, java.lang.String> getUsedNamespaces() {
-        Set<java.lang.String> urls = new HashSet<>();
+    private Map<String, String> getUsedNamespaces() {
+        Set<String> urls = new HashSet<>();
         urls.add(CimConstants.NAMESPACES_MAP.get("rdf"));
         for (String rdfid : cimData.keySet()) {
             BaseClass cimObj = cimData.get(rdfid);
@@ -167,7 +167,7 @@ public class RdfWriter {
                 }
             }
         }
-        Map<java.lang.String, java.lang.String> namespaces = new HashMap<>();
+        Map<String, String> namespaces = new HashMap<>();
         for (var url : urls) {
             var ns = getNamespaceKey(url);
             if (ns != null) {
@@ -177,7 +177,7 @@ public class RdfWriter {
         return namespaces;
     }
 
-    private java.lang.String getNamespaceKey(java.lang.String url) {
+    private String getNamespaceKey(String url) {
         for (var entry : CimConstants.NAMESPACES_MAP.entrySet()) {
             if (entry.getValue().equals(url)) {
                 return entry.getKey();
