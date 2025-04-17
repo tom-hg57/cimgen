@@ -60,7 +60,8 @@ public class CimModelService {
         model = cimModelRepository.save(model);
         var cimFileAsStringList = ZipFileUtils.extractCimFilesFromZipFile(zipData);
         try {
-            var map = RdfReader.readFromStrings(cimFileAsStringList);
+            var rdfReader = new RdfReader();
+            var map = rdfReader.readFromStrings(cimFileAsStringList);
             saveCimObjects(map.values(), model);
         } catch (Exception ex) {
             String txt = "Error while reading zip data";
