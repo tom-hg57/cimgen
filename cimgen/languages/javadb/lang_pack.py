@@ -10,11 +10,8 @@ logger = logging.getLogger(__name__)
 # Setup called only once: make output directory, create base class, create profile class, etc.
 # This just makes sure we have somewhere to write the classes.
 # cgmes_profile_details contains index, names and uris for each profile.
-# We don't use that here because we aren't exporting into
-# separate profiles.
-def setup(
-    output_path: str, version: str, cgmes_profile_details: list[dict], namespaces: dict[str, str]
-) -> None:  # NOSONAR
+# We use that to create the header data for the profiles.
+def setup(output_path: str, version: str, cgmes_profile_details: list[dict], namespaces: dict[str, str]) -> None:
     source_dir = Path(__file__).parent
     dest_dir = Path(output_path)
     for file in dest_dir.glob("**/*.java"):
@@ -25,13 +22,15 @@ def setup(
         dest_file.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(file, dest_file)
     _create_constants(dest_dir, version, namespaces)
+    _create_cgmes_profile(dest_dir, cgmes_profile_details)
 
 
 # These are the files that are used to generate the java files.
 class_template_file = {"filename": "class_template.mustache", "ext": ".java"}
 enum_template_file = {"filename": "enum_template.mustache", "ext": ".java"}
-classlist_template = {"filename": "classlist_template.mustache", "ext": ".java"}
 constants_template_file = {"filename": "constants_template.mustache", "ext": ".java"}
+profile_template_file = {"filename": "java_profile.mustache", "ext": ".java"}
+classlist_template_file = {"filename": "classlist_template.mustache", "ext": ".java"}
 
 
 def get_base_class() -> str:
@@ -100,6 +99,12 @@ def _create_constants(output_path: Path, version: str, namespaces: dict[str, str
     namespaces_list = [{"ns": ns, "uri": uri} for ns, uri in sorted(namespaces.items())]
     class_details = {"version": version, "namespaces": namespaces_list}
     _write_templated_file(class_file, class_details, constants_template_file["filename"])
+
+
+def _create_cgmes_profile(output_path: Path, profile_details: list[dict]) -> None:
+    class_file = output_path / ("CGMESProfile" + profile_template_file["ext"])
+    class_details = {"profiles": profile_details}
+    _write_templated_file(class_file, class_details, profile_template_file["filename"])
 
 
 def _variable_name(label: str) -> str:
@@ -182,10 +187,11 @@ def _attribute_is_really_used(attribute: dict) -> bool:
     return attribute["is_class_attribute_with_inverse_list"]
 
 
-# The code below this line is used after the main cim_generate phase to generate CIMClassMap.java.
+# The code below this line is used after the main cim_generate phase to generate CimClassMap.java.
 
 class_blacklist = [
     "BaseClass",
+    "CGMESProfile",
     "CimModel",
     "CimModelService",
     "CimClassMap",
@@ -194,21 +200,12 @@ class_blacklist = [
 ]
 
 
-def _create_classlist_file(
-    directory: Path, classlist_filename: str, template_filename: str, blacklist: list[str]
-) -> None:
+def resolve_headers(path: str, version: str) -> None:  # NOSONAR
+    directory = Path(path)
+    classlist_file = directory / ("CimClassMap" + classlist_template_file["ext"])
     classes = []
     for file in sorted(directory.glob("*.java"), key=lambda f: f.stem):
         class_name = file.stem
-        if class_name not in blacklist:
+        if class_name not in class_blacklist:
             classes.append(class_name)
-    _write_templated_file(directory / classlist_filename, {"classes": classes}, template_filename)
-
-
-def resolve_headers(path: str, version: str) -> None:  # NOSONAR
-    _create_classlist_file(
-        Path(path),
-        "CimClassMap" + classlist_template["ext"],
-        classlist_template["filename"],
-        class_blacklist,
-    )
+    _write_templated_file(classlist_file, {"classes": classes}, classlist_template_file["filename"])
