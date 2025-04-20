@@ -1,6 +1,5 @@
 package cim4jdb;
 
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -156,8 +155,7 @@ public abstract class BaseClass {
     public abstract List<String> getAttributeNames();
 
     protected Map<String, AttrDetails> allAttrDetailsMap() {
-        Map<String, AttrDetails> map = new LinkedHashMap<>();
-        return map;
+        return Map.of();
     }
 
     /**
@@ -255,6 +253,40 @@ public abstract class BaseClass {
     public abstract String getAttributeNamespaceUrl(String attrName);
 
     /**
+     * A resource can be used by multiple profiles. This is the set of profiles
+     * where this element can be found.
+     *
+     * @return All possible profiles for an object of this class
+     */
+    public abstract Set<CGMESProfile> getPossibleProfiles();
+
+    /**
+     * This is the profile with most of the attributes.
+     * It should be used to write the data to as few as possible files.
+     *
+     * @return The recommended profiles for an object of this class
+     */
+    public abstract CGMESProfile getRecommendedProfile();
+
+    /**
+     * Get the possible profiles of an attribute (also for inherited attributes).
+     *
+     * @return All possible profiles for an attribute
+     */
+    public abstract Set<CGMESProfile> getPossibleAttributeProfiles(String attrName);
+
+    /**
+     * Get the possible profiles for an object of this class including the possible
+     * profiles of all direct or inherited attributes.
+     *
+     * A resource can be used by multiple profiles. This is the set of profiles
+     * where this element or an attribute of this element can be found.
+     *
+     * @return All possible profiles for an object of this class and its attributes
+     */
+    public abstract Set<CGMESProfile> getPossibleProfilesIncludingAttributes();
+
+    /**
      * Helper functions.
      */
 
@@ -290,50 +322,47 @@ public abstract class BaseClass {
     }
 
     protected String getStringFromSet(Set<? extends BaseClass> set) {
-        String references = "";
-        for (var obj : set) {
-            references += obj.getRdfid() + " ";
+        if (!set.isEmpty()) {
+            String references = "";
+            for (var obj : set) {
+                references += obj.getRdfid() + " ";
+            }
+            return references.trim();
         }
-        return references.trim();
+        return null;
     }
 
     /**
-     * Nested helper class.
+     * Nested helper classes.
      */
+
     protected static class AttrDetails {
-        public AttrDetails() {
-        }
-
-        public AttrDetails(String f, Supplier<String> g, Consumer<BaseClass> o, boolean u, String n) {
+        public AttrDetails(String f, boolean u, String n, Set<CGMESProfile> c, boolean p, boolean e) {
             fullName = f;
-            getter = g;
-            objectSetter = o;
-            stringSetter = null;
             isUsed = u;
             nameSpace = n;
-            isPrimitive = false;
-            isEnum = false;
-        }
-
-        public AttrDetails(String f, Supplier<String> g, Consumer<String> s, boolean u, String n, boolean p,
-                boolean e) {
-            fullName = f;
-            getter = g;
-            objectSetter = null;
-            stringSetter = s;
-            isUsed = u;
-            nameSpace = n;
+            profiles = c;
             isPrimitive = p;
             isEnum = e;
         }
 
         public String fullName;
+        public boolean isUsed;
+        public String nameSpace;
+        public Set<CGMESProfile> profiles;
+        public Boolean isPrimitive;
+        public Boolean isEnum;
+    }
+
+    protected static class GetterSetter {
+        public GetterSetter(Supplier<String> g, Consumer<BaseClass> o, Consumer<String> s) {
+            getter = g;
+            objectSetter = o;
+            stringSetter = s;
+        }
+
         public Supplier<String> getter;
         public Consumer<BaseClass> objectSetter;
         public Consumer<String> stringSetter;
-        public boolean isUsed;
-        public String nameSpace;
-        public Boolean isPrimitive;
-        public Boolean isEnum;
     }
 }
