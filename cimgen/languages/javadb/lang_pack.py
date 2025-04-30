@@ -26,11 +26,11 @@ def setup(output_path: str, version: str, cgmes_profile_details: list[dict], nam
 
 
 # These are the files that are used to generate the java files.
-class_template_file = {"filename": "class_template.mustache", "ext": ".java"}
-enum_template_file = {"filename": "enum_template.mustache", "ext": ".java"}
-constants_template_file = {"filename": "constants_template.mustache", "ext": ".java"}
+class_template_file = {"filename": "java_class.mustache", "ext": ".java"}
+enum_template_file = {"filename": "java_enum.mustache", "ext": ".java"}
+constants_template_file = {"filename": "java_constants.mustache", "ext": ".java"}
 profile_template_file = {"filename": "java_profile.mustache", "ext": ".java"}
-classlist_template_file = {"filename": "classlist_template.mustache", "ext": ".java"}
+classlist_template_file = {"filename": "java_classlist.mustache", "ext": ".java"}
 
 
 def get_base_class() -> str:
