@@ -2,7 +2,7 @@
 Generated from the CGMES files via cimgen: https://github.com/sogno-platform/cimgen
 */
 
-package cim4j;
+package cim4jdb;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -14,12 +14,21 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+
+import org.springframework.data.repository.CrudRepository;
+
 {{#class_comment}}
 /**
  * {{{class_comment}}}
  */
 {{/class_comment}}
+@Entity
 @SuppressWarnings("unused")
+@Table(name = "{{table_name}}")
 public class {{class_name}} extends {{subclass_of}} {
 
     private static final Logging LOG = Logging.getLogger({{class_name}}.class);
@@ -36,12 +45,22 @@ public class {{class_name}} extends {{subclass_of}} {
 {{#comment}}
      * {{comment}}
 {{/comment}}
+{{#is_really_used}}
 {{^is_used}}
      *
-     * NOT USED
+     * (shouldn't have used, but is class attribute with inverse list)
 {{/is_used}}
+{{/is_really_used}}
+{{^is_really_used}}
+     *
+     * NOT USED
+{{#is_used}}
+     * (should have used, but is list attribute)
+{{/is_used}}
+{{/is_really_used}}
      */
 {{#is_primitive_attribute}}
+    @Column(name = "{{column_name}}")
     private {{primitive_java_type}} {{variable_name}}; // {{attribute_class}}
 
     public {{primitive_java_type}} {{getter_name}}() {
@@ -63,6 +82,7 @@ public class {{class_name}} extends {{subclass_of}} {
     }
 {{/is_primitive_attribute}}
 {{#is_datatype_attribute}}
+    @Column(name = "{{column_name}}")
     private Double {{variable_name}}; // {{attribute_class}}
 
     public Double {{getter_name}}() {
@@ -82,6 +102,7 @@ public class {{class_name}} extends {{subclass_of}} {
     }
 {{/is_datatype_attribute}}
 {{#is_enum_attribute}}
+    @Column(name = "{{column_name}}")
     private String {{variable_name}}; // {{attribute_class}}
 
     public String {{getter_name}}() {
@@ -97,12 +118,18 @@ public class {{class_name}} extends {{subclass_of}} {
     }
 {{/is_enum_attribute}}
 {{#is_class_attribute}}
+    @Transient
 {{#is_class_attribute_with_inverse_list}}
     private {{attribute_class}} {{variable_name}}; // ManyToOne
 {{/is_class_attribute_with_inverse_list}}
 {{^is_class_attribute_with_inverse_list}}
     private {{attribute_class}} {{variable_name}}; // OneToOne
 {{/is_class_attribute_with_inverse_list}}
+{{#is_really_used}}
+
+    @Column(name = "{{column_name}}")
+    private String {{variable_name}}Id;
+{{/is_really_used}}
 
     public {{attribute_class}} {{getter_name}}() {
         return {{variable_name}};
@@ -112,19 +139,33 @@ public class {{class_name}} extends {{subclass_of}} {
         if (!(_object_ instanceof {{attribute_class}})) {
             throw new IllegalArgumentException("Object is not {{attribute_class}}");
         }
+        if (!Objects.equals(_object_.getCimModel(), getCimModel())) {
+            throw new IllegalArgumentException("Object belongs to different model");
+        }
         if ({{variable_name}} != _object_) {
             {{variable_name}} = ({{attribute_class}}) _object_;
 {{#inverse_setter}}
             {{variable_name}}.{{.}}(this);
 {{/inverse_setter}}
+{{#is_really_used}}
+            {{variable_name}}Id = {{variable_name}}.getRdfid();
+{{/is_really_used}}
         }
     }
 
+{{#is_really_used}}
+    public String {{label}}ToString() {
+        return {{variable_name}}Id;
+    }
+{{/is_really_used}}
+{{^is_really_used}}
     public String {{label}}ToString() {
         return {{variable_name}} != null ? {{variable_name}}.getRdfid() : null;
     }
+{{/is_really_used}}
 {{/is_class_attribute}}
 {{#is_list_attribute}}
+    @Transient
     private Set<{{attribute_class}}> {{variable_name}} = new HashSet<>(); // OneToMany
 
     public Set<{{attribute_class}}> {{getter_name}}() {
@@ -134,6 +175,9 @@ public class {{class_name}} extends {{subclass_of}} {
     public void {{setter_name}}(BaseClass _object_) {
         if (!(_object_ instanceof {{attribute_class}})) {
             throw new IllegalArgumentException("Object is not {{attribute_class}}");
+        }
+        if (!Objects.equals(_object_.getCimModel(), getCimModel())) {
+            throw new IllegalArgumentException("Object belongs to different model");
         }
         if (!{{variable_name}}.contains(_object_)) {
             {{variable_name}}.add(({{attribute_class}}) _object_);
@@ -148,6 +192,12 @@ public class {{class_name}} extends {{subclass_of}} {
     }
 {{/is_list_attribute}}
 {{/attributes}}
+
+    /**
+     * Nested repository. The implementation is automatically created.
+     */
+    public interface Repository extends CrudRepository<{{class_name}}, Long> {
+    }
 
     /**
      * Get a list of all attribute names of the CIM type.
@@ -399,6 +449,7 @@ public class {{class_name}} extends {{subclass_of}} {
         ATTR_NAMES_LIST = new ArrayList<>(ATTR_DETAILS_MAP.keySet());
     }
 
+    @Transient
     private final Map<String, GetterSetter> classGetterSetterMap = fillGetterSetterMap();
     private final Map<String, GetterSetter> fillGetterSetterMap() {
         Map<String, GetterSetter> map = new LinkedHashMap<>();

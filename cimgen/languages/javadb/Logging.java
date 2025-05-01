@@ -1,4 +1,4 @@
-package cim4j;
+package cim4jdb;
 
 // import org.apache.logging.log4j.LogManager;
 // import org.apache.logging.log4j.Logger;
