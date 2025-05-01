@@ -2,13 +2,19 @@
 Generated from the CGMES files via cimgen: https://github.com/sogno-platform/cimgen
 */
 
-package cim4j;
+package cim4jdb;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
 public final class CimClassMap {
 
     /**
@@ -45,6 +51,86 @@ public final class CimClassMap {
     }
 
     /**
+     * Saves a CIM object to the database.
+     *
+     * The CIM object has to be an instance of the right class corresponding to the
+     * class name.
+     * The save function calls the save method of the repository embedded in this
+     * class.
+     *
+     * This function couldn't be static because it uses the repositories as Java
+     * Beans.
+     *
+     * @param className The class name of the new CIM object.
+     * @param obj       The CIM object.
+     * @return          The saved CIM object.
+     */
+    public BaseClass saveCimObject(String className, BaseClass obj) {
+        var saveFunction = SAVE_MAP.get(className);
+        return saveFunction.apply(obj);
+    }
+
+    /**
+     * Saves a CIM object to the database.
+     *
+     * @param clazz The class of the new CIM object.
+     * @param obj   The CIM object.
+     * @return      The saved CIM object.
+     */
+    @SuppressWarnings("unchecked")
+    public <T extends BaseClass> T saveCimObject(Class<? extends BaseClass> clazz, T obj) {
+        var className = clazz.getSimpleName();
+        return (T) saveCimObject(className, obj);
+    }
+
+    /**
+     * Reads a CIM object from the database.
+     *
+     * @param className The class name of the CIM object.
+     * @param id        The ID of the CIM object.
+     * @return          The read CIM object.
+     */
+    public BaseClass readCimObject(String className, Long id) {
+        var readFunction = READ_MAP.get(className);
+        return readFunction.apply(id);
+    }
+
+    /**
+     * Reads a CIM object from the database (as object of the correct class).
+     *
+     * @param className The class name of the CIM object.
+     * @param id        The ID of the CIM object.
+     * @return          The read CIM object.
+     */
+    @SuppressWarnings("unchecked")
+    public <T extends BaseClass> T readCimObject(Class<T> clazz, Long id) {
+        var className = clazz.getSimpleName();
+        return (T) readCimObject(className, id);
+    }
+
+    /**
+     * Deletes a CIM object from the database.
+     *
+     * @param className The class name of the CIM object.
+     * @param id        The ID of the CIM object.
+     */
+    public void deleteCimObject(String className, Long id) {
+        var deleteFunction = DELETE_MAP.get(className);
+        deleteFunction.accept(id);
+    }
+
+    /**
+     * Deletes a CIM object from the database (as object of the correct class).
+     *
+     * @param className The class name of the CIM object.
+     * @param id        The ID of the CIM object.
+     */
+    public <T extends BaseClass> void deleteCimObject(Class<T> clazz, Long id) {
+        var className = clazz.getSimpleName();
+        deleteCimObject(className, id);
+    }
+
+    /**
      * Map of CIM class name to supplier function which creates a new CIM object.
      */
     private static final Map<String, Supplier<BaseClass>> CREATE_MAP;
@@ -56,5 +142,54 @@ public final class CimClassMap {
 {{/classes}}
 
         CREATE_MAP = Collections.unmodifiableMap(map);
+    }
+
+    /**
+     * Repositories used to save and read CIM objects to/from the database.
+     */
+{{#classes}}
+    @Autowired private {{.}}.Repository repo{{.}};
+{{/classes}}
+
+    /**
+     * Map of CIM class name to function which saves a CIM object to the database.
+     */
+    private final Map<String, Function<BaseClass, BaseClass>> SAVE_MAP;
+    {
+        var map = new LinkedHashMap<String, Function<BaseClass, BaseClass>>();
+
+{{#classes}}
+        map.put("{{.}}", obj -> repo{{.}}.save(({{.}}) obj));
+{{/classes}}
+
+        SAVE_MAP = Collections.unmodifiableMap(map);
+    }
+
+    /**
+     * Map of CIM class name to function which reads a CIM object from the database.
+     */
+    private final Map<String, Function<Long, BaseClass>> READ_MAP;
+    {
+        var map = new LinkedHashMap<String, Function<Long, BaseClass>>();
+
+{{#classes}}
+        map.put("{{.}}", id -> repo{{.}}.findById(id).get());
+{{/classes}}
+
+        READ_MAP = Collections.unmodifiableMap(map);
+    }
+
+    /**
+     * Map of CIM class name to function which deletes a CIM object from the database.
+     */
+    private final Map<String, Consumer<Long>> DELETE_MAP;
+    {
+        var map = new LinkedHashMap<String, Consumer<Long>>();
+
+{{#classes}}
+        map.put("{{.}}", id -> repo{{.}}.deleteById(id));
+{{/classes}}
+
+        DELETE_MAP = Collections.unmodifiableMap(map);
     }
 }

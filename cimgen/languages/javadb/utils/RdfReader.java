@@ -1,4 +1,4 @@
-package cim4j.utils;
+package cim4jdb.utils;
 
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
@@ -8,9 +8,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import cim4j.BaseClass;
-import cim4j.CimClassMap;
-import cim4j.Logging;
+import cim4jdb.BaseClass;
+import cim4jdb.CimClassMap;
+import cim4jdb.Logging;
 
 /**
  * Read RDF files into a map of rdfid to CIM object.
