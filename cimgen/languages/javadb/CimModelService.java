@@ -10,9 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
-import cim4jdb.utils.RdfReader;
-import de.psi.cimarchive.utils.ZipFileUtils;
-
 /**
  * Service class for managing CimModel objects.
  */
@@ -53,21 +50,12 @@ public class CimModelService {
      * model.
      *
      * @param model   The CIM model the objects has to be linked to.
-     * @param zipData The content of the zip file
+     * @param objList The list of objects of any CIM type.
      * @return        The saved CIM model.
      */
-    public CimModel saveCimModel(CimModel model, byte[] zipData) {
+    public CimModel saveCimModel(CimModel model, Iterable<BaseClass> objList) {
         model = cimModelRepository.save(model);
-        var cimFileAsStringList = ZipFileUtils.extractCimFilesFromZipFile(zipData);
-        try {
-            var rdfReader = new RdfReader();
-            var map = rdfReader.readFromStrings(cimFileAsStringList);
-            saveCimObjects(map.values(), model);
-        } catch (Exception ex) {
-            String txt = "Error while reading zip data";
-            LOG.error(txt, ex);
-            throw new RuntimeException(txt, ex);
-        }
+        saveCimObjects(objList, model);
         for (var entry : getCimObjectInfos(model.getCimModelId()).entrySet()) {
             LOG.debug(String.format("Object in CIM model %d: id=%d type=%s", model.getCimModelId(), entry.getKey(),
                     entry.getValue()));
