@@ -9,7 +9,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -31,23 +30,25 @@ public final class CimClassMap {
      * Creates a new CIM object.
      *
      * @param className The class name of the new CIM object.
+     * @param rdfid     The RDF ID of the CIM object read from rdf:ID or rdf:about.
      * @return          The new CIM object.
      */
-    public static BaseClass createCimObject(String className) {
+    public static BaseClass createCimObject(String className, String rdfid) {
         var createFunction = CREATE_MAP.get(className);
-        return createFunction.get();
+        return createFunction.apply(rdfid);
     }
 
     /**
      * Creates a new CIM object (as object of the correct class).
      *
      * @param clazz The class of the new CIM object.
+     * @param rdfid The RDF ID of the CIM object read from rdf:ID or rdf:about.
      * @return      The new CIM object.
      */
     @SuppressWarnings("unchecked")
-    public static <T extends BaseClass> T createCimObject(Class<T> clazz) {
+    public static <T extends BaseClass> T createCimObject(Class<T> clazz, String rdfid) {
         var className = clazz.getSimpleName();
-        return (T) createCimObject(className);
+        return (T) createCimObject(className, rdfid);
     }
 
     /**
@@ -131,14 +132,14 @@ public final class CimClassMap {
     }
 
     /**
-     * Map of CIM class name to supplier function which creates a new CIM object.
+     * Map of CIM class name to constructor function which creates a new CIM object.
      */
-    private static final Map<String, Supplier<BaseClass>> CREATE_MAP;
+    private static final Map<String, Function<String, BaseClass>> CREATE_MAP;
     static {
-        var map = new LinkedHashMap<String, Supplier<BaseClass>>();
+        var map = new LinkedHashMap<String, Function<String, BaseClass>>();
 
 {{#classes}}
-        map.put("{{.}}", () -> new {{.}}());
+        map.put("{{.}}", rdfid -> new {{.}}(rdfid));
 {{/classes}}
 
         CREATE_MAP = Collections.unmodifiableMap(map);

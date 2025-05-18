@@ -31,12 +31,24 @@ import org.springframework.data.repository.CrudRepository;
  * The cimType is the name of the real class of the CIM object - a subclass of
  * BaseClass. To read or write a CIM object the repository of this subclass
  * should be used.
+ * The rdfid and cimType are fixed after creation of a CIM object.
  */
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
 public abstract class BaseClass {
 
     private static final Logging LOG = Logging.getLogger(BaseClass.class);
+
+    /**
+     * Constructor for subclasses.
+     *
+     * @param cimType The name of the CIM type.
+     * @param rdfid   The RDF ID of the CIM object read from rdf:ID or rdf:about.
+     */
+    protected BaseClass(String cimType, String rdfid) {
+        this.cimType = cimType;
+        this.rdfid = rdfid;
+    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -71,10 +83,6 @@ public abstract class BaseClass {
         return cimType;
     }
 
-    public void setCimType(String cimType) {
-        this.cimType = cimType;
-    }
-
     /**
      * The RDF ID of the CIM object read from rdf:ID or rdf:about.
      */
@@ -82,10 +90,6 @@ public abstract class BaseClass {
 
     public String getRdfid() {
         return rdfid;
-    }
-
-    public void setRdfid(String rdfid) {
-        this.rdfid = rdfid;
     }
 
     /**
