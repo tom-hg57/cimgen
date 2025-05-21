@@ -121,8 +121,12 @@ public class CimModelService {
             for (var obj : model.values()) {
                 var attrNames = obj.getAttributeNames();
                 for (String attrName : attrNames) {
-                    String attr = obj.getAttribute(attrName);
-                    if (attr != null && !obj.isPrimitiveAttribute(attrName) && !obj.isEnumAttribute(attrName)) {
+                    Object attr = obj.getAttribute(attrName);
+                    if (attr instanceof String && !obj.isPrimitiveAttribute(attrName)
+                            && !obj.isEnumAttribute(attrName)) {
+                        // After reading from database there is only the Id of the linked object
+                        // for class attributes. This Id is provided by getAttribute().
+                        // It has to be replaced by the link to the real object.
                         var linkedObj = model.get(attr);
                         if (linkedObj != null) {
                             try {
