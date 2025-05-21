@@ -45,7 +45,7 @@ public abstract class BaseClass {
      * @param cimType The name of the CIM type.
      * @param rdfid   The RDF ID of the CIM object read from rdf:ID or rdf:about.
      */
-    protected BaseClass(String cimType, String rdfid) {
+    protected BaseClass(final String cimType, final String rdfid) {
         this.cimType = cimType;
         this.rdfid = rdfid;
     }
@@ -77,7 +77,7 @@ public abstract class BaseClass {
     /**
      * The name of the CIM type.
      */
-    private String cimType;
+    private final String cimType;
 
     public String getCimType() {
         return cimType;
@@ -86,7 +86,7 @@ public abstract class BaseClass {
     /**
      * The RDF ID of the CIM object read from rdf:ID or rdf:about.
      */
-    private String rdfid;
+    private final String rdfid;
 
     public String getRdfid() {
         return rdfid;
@@ -127,6 +127,16 @@ public abstract class BaseClass {
         result = (result * PRIME) + (cimModel == null ? 0 : cimModel.hashCode());
         result = (result * PRIME) + (rdfid == null ? 0 : rdfid.hashCode());
         return result;
+    }
+
+    /**
+     * Returns a string representation of the object.
+     *
+     * @return  a string representation of the object.
+     */
+    @Override
+    public final String toString() {
+       return cimType + " with rdfid " + rdfid;
     }
 
     /**
