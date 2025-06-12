@@ -1,4 +1,4 @@
-package cim4j;
+package cim4jdb;
 
 import java.util.List;
 import java.util.Map;
@@ -6,15 +6,35 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Inheritance;
+import jakarta.persistence.InheritanceType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.CrudRepository;
+
 /**
  * Base class of the CIM type hierarchy - all not primitive CIM classes inherit
  * from this class.
  *
+ * Represents a CIM object which gets stored in the database and is linked to a
+ * CIM model.
+ *
  * The rdfid is a unique identifier inside of a CIM model.
+ * The id of the CIM model and the rdfid together are a unique identifier in
+ * this database table.
  * The cimType is the name of the real class of the CIM object - a subclass of
- * BaseClass.
+ * BaseClass. To read or write a CIM object the repository of this subclass
+ * should be used.
  * The rdfid and cimType are fixed after creation of a CIM object.
  */
+@Entity
+@Inheritance(strategy = InheritanceType.JOINED)
 public abstract class BaseClass {
 
     private static final Logging LOG = Logging.getLogger(BaseClass.class);
@@ -28,6 +48,30 @@ public abstract class BaseClass {
     protected BaseClass(final String cimType, final String rdfid) {
         this.cimType = cimType;
         this.rdfid = rdfid;
+    }
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    private Long id;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "cim_model_id", referencedColumnName = "cim_model_id")
+    private CimModel cimModel;
+
+    public CimModel getCimModel() {
+        return cimModel;
+    }
+
+    public void setCimModel(CimModel cimModel) {
+        this.cimModel = cimModel;
     }
 
     /**
@@ -61,6 +105,8 @@ public abstract class BaseClass {
         if (obj == null || obj.getClass() != getClass())
             return false;
         BaseClass other = (BaseClass) obj;
+        if (cimModel == null ? other.cimModel != null : !cimModel.equals(other.cimModel))
+            return false;
         if (rdfid == null ? other.rdfid != null : !rdfid.equals(other.rdfid))
             return false;
         return true;
@@ -78,6 +124,7 @@ public abstract class BaseClass {
     public final int hashCode() {
         final int PRIME = 31;
         int result = 1;
+        result = (result * PRIME) + (cimModel == null ? 0 : cimModel.hashCode());
         result = (result * PRIME) + (rdfid == null ? 0 : rdfid.hashCode());
         return result;
     }
@@ -90,6 +137,25 @@ public abstract class BaseClass {
     @Override
     public final String toString() {
        return cimType + " with rdfid " + rdfid;
+    }
+
+    /**
+     * Nested repository. The implementation is automatically created.
+     */
+    public interface Repository extends CrudRepository<BaseClass, Long> {
+        /**
+         * Searches for all CIM objects that match the specified cimModelId, and returns
+         * ID and CIM type of these objects.
+         *
+         * Using an explicit query avoids huge select statements by getting only ID and
+         * CIM type from the BaseClass table. To get the real CIM objects the repository
+         * of the subclass according to the CIM type should be used.
+         *
+         * @param cimModelId ID of a CIM model
+         * @return           CIM objects of this model as list with ID and CIM type
+         */
+        @Query("SELECT obj.id, obj.cimType FROM BaseClass obj WHERE obj.cimModel.cimModelId = ?1")
+        List<Object[]> findByModel(Long cimModelId);
     }
 
     /**

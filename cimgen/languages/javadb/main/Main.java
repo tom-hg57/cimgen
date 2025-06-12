@@ -1,16 +1,16 @@
-package cim4j.main;
+package cim4jdb.main;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import cim4j.BaseClass;
-import cim4j.Logging;
-import cim4j.utils.RdfReader;
-import cim4j.utils.RdfWriter;
+import cim4jdb.BaseClass;
+import cim4jdb.Logging;
+import cim4jdb.utils.RdfReader;
+import cim4jdb.utils.RdfWriter;
 
 /**
- * Main class of the cim4j application.
+ * Main class of the cim4jdb application.
  */
 public final class Main {
 
@@ -25,7 +25,7 @@ public final class Main {
             System.out.println("\nError: " + error);
         }
         System.out.println("\nRead RDF files and write the data to RDF files separated by profiles.\n");
-        System.out.println("Usage: java -jar cim4j.jar [--log-level <level>] <rdf_file> [<rdf_file> ...]" +
+        System.out.println("Usage: java -jar cim4jdb.jar [--log-level <level>] <rdf_file> [<rdf_file> ...]" +
                 " <output_path_stem>");
         System.out.println("       --log-level <level>  Log level (fatal, error, warn, info, debug, trace)");
         System.out.println("                            Default log level: error");
@@ -36,7 +36,7 @@ public final class Main {
     }
 
     /**
-     * Main function of the cim4j application.
+     * Main function of the cim4jdb application.
      */
     public static void main(String[] args) {
         int offset = 0;

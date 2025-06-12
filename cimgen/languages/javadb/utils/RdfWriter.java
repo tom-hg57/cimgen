@@ -1,4 +1,4 @@
-package cim4j.utils;
+package cim4jdb.utils;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -17,10 +17,10 @@ import java.util.TreeSet;
 
 import javax.xml.stream.XMLOutputFactory;
 
-import cim4j.BaseClass;
-import cim4j.CGMESProfile;
-import cim4j.CimConstants;
-import cim4j.Logging;
+import cim4jdb.BaseClass;
+import cim4jdb.CGMESProfile;
+import cim4jdb.CimConstants;
+import cim4jdb.Logging;
 
 /**
  * Convert cim data to rdf.

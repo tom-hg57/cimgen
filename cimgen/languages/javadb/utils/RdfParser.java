@@ -1,4 +1,4 @@
-package cim4j.utils;
+package cim4jdb.utils;
 
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -11,8 +11,8 @@ import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
-import cim4j.CimConstants;
-import cim4j.Logging;
+import cim4jdb.CimConstants;
+import cim4jdb.Logging;
 
 /**
  * Read RDF files into a map of rdfid to CIM object.
