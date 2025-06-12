@@ -1,4 +1,4 @@
-package cim4j.utils;
+package cim4jdb.utils;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -16,10 +16,10 @@ import java.util.Set;
 
 import javax.xml.stream.XMLOutputFactory;
 
-import cim4j.BaseClass;
-import cim4j.CGMESProfile;
-import cim4j.CimConstants;
-import cim4j.Logging;
+import cim4jdb.BaseClass;
+import cim4jdb.CGMESProfile;
+import cim4jdb.CimConstants;
+import cim4jdb.Logging;
 
 /**
  * Convert cim data to rdf.
@@ -270,9 +270,11 @@ public class RdfWriter {
                                         writer.writeAttribute(RDF, "resource", resource);
                                     }
                                 } else if (attr instanceof String) {
-                                    writer.writeCharacters("\n    ");
-                                    writer.writeEmptyElement(namespaceUrl, attrFullName);
-                                    writer.writeAttribute(RDF, "resource", "#" + (String) attr);
+                                    for (var attrItem : ((String) attr).split(" ")) {
+                                        writer.writeCharacters("\n    ");
+                                        writer.writeEmptyElement(namespaceUrl, attrFullName);
+                                        writer.writeAttribute(RDF, "resource", "#" + attrItem);
+                                    }
                                 }
                             }
                         }
