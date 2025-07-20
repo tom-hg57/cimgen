@@ -127,13 +127,19 @@ public class CimModelService {
                         // After reading from database there is only the Id of the linked object
                         // for class attributes. This Id is provided by getAttribute().
                         // It has to be replaced by the link to the real object.
-                        var linkedObj = model.get(attr);
-                        if (linkedObj != null) {
-                            try {
-                                obj.setAttribute(attrName, linkedObj);
-                            } catch (Exception ex) {
-                                LOG.error(String.format("Error while linking attribute %s.%s for rdfid %s",
-                                        obj.getCimType(), attrName, obj.getRdfid()), ex);
+                        // For few list attributes (e.g. TopologicalIsland to TopologicalNode)
+                        // getAttribute() provides a list of Ids separated by blanks.
+                        for (var attrItem : ((String) attr).split(" ")) {
+                            // First set id as link then try to find the object
+                            obj.setAttribute(attrName, attrItem);
+                            var linkedObj = model.get(attrItem);
+                            if (linkedObj != null) {
+                                try {
+                                    obj.setAttribute(attrName, linkedObj);
+                                } catch (Exception ex) {
+                                    LOG.error(String.format("Error while linking attribute %s.%s for rdfid %s",
+                                            obj.getCimType(), attrName, obj.getRdfid()), ex);
+                                }
                             }
                         }
                     }

@@ -19,7 +19,6 @@ import javax.xml.stream.XMLOutputFactory;
 import cim4jdb.BaseClass;
 import cim4jdb.CGMESProfile;
 import cim4jdb.CimConstants;
-import cim4jdb.IdentifiedObject;
 import cim4jdb.Logging;
 
 /**
@@ -203,8 +202,7 @@ public class RdfWriter {
             int count = 0;
             for (String rdfid : cimData.keySet()) {
                 BaseClass cimObj = cimData.get(rdfid);
-                if (!cimObj.getClass().equals(IdentifiedObject.class)
-                        && (profile == null || isClassMatchingProfile(cimObj, profile))) {
+                if (profile == null || isClassMatchingProfile(cimObj, profile)) {
                     String cimType = cimObj.getCimType();
                     var classProfile = profile != null ? classProfileMap.get(cimType) : null;
                     boolean mainEntryOfObject = Objects.equals(classProfile, profile);
@@ -260,11 +258,22 @@ public class RdfWriter {
                                     writer.writeEmptyElement(namespaceUrl, attrFullName);
                                     writer.writeAttribute(RDF, "resource", resource);
                                 } else if (attr instanceof Set<?>) {
-                                    for (var attrObject : ((Set<?>) attr)) {
-                                        String resource = "#" + ((BaseClass) attrObject).getRdfid();
+                                    for (var attrItem : ((Set<?>) attr)) {
+                                        String resource = "#";
+                                        if (attrItem instanceof BaseClass) {
+                                            resource += ((BaseClass) attrItem).getRdfid();
+                                        } else {
+                                            resource += (String) attrItem;
+                                        }
                                         writer.writeCharacters("\n    ");
                                         writer.writeEmptyElement(namespaceUrl, attrFullName);
                                         writer.writeAttribute(RDF, "resource", resource);
+                                    }
+                                } else if (attr instanceof String) {
+                                    for (var attrItem : ((String) attr).split(" ")) {
+                                        writer.writeCharacters("\n    ");
+                                        writer.writeEmptyElement(namespaceUrl, attrFullName);
+                                        writer.writeAttribute(RDF, "resource", "#" + attrItem);
                                     }
                                 }
                             }
