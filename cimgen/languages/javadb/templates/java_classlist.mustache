@@ -11,6 +11,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -52,83 +53,90 @@ public final class CimClassMap {
     }
 
     /**
-     * Saves a CIM object to the database.
+     * Saves several CIM objects of the same type to the database.
      *
-     * The CIM object has to be an instance of the right class corresponding to the
-     * class name.
-     * The save function calls the save method of the repository embedded in this
-     * class.
+     * The CIM objects have to be instances of the right class corresponding to the
+     * class name. The save function calls the saveAll method of the repository
+     * embedded in this class.
      *
-     * This function couldn't be static because it uses the repositories as Java
-     * Beans.
+     * The save, read and delete functions couldn't be static because they use the
+     * repositories as Java Beans.
      *
-     * @param className The class name of the new CIM object.
-     * @param obj       The CIM object.
-     * @return          The saved CIM object.
+     * @param className The class name of the CIM objects.
+     * @param objList   The list of CIM objects.
+     * @return          The list of saved CIM objects.
      */
-    public BaseClass saveCimObject(String className, BaseClass obj) {
+    public Iterable<BaseClass> saveCimObjects(String className, Iterable<BaseClass> objList) {
         var saveFunction = SAVE_MAP.get(className);
-        return saveFunction.apply(obj);
+        return saveFunction.apply(objList);
     }
 
     /**
-     * Saves a CIM object to the database.
+     * Saves several CIM objects of the same type to the database.
      *
-     * @param clazz The class of the new CIM object.
-     * @param obj   The CIM object.
-     * @return      The saved CIM object.
+     * @param clazz   The class of the CIM objects.
+     * @param objList The list of CIM objects.
+     * @return        The list of saved CIM objects.
      */
     @SuppressWarnings("unchecked")
-    public <T extends BaseClass> T saveCimObject(Class<? extends BaseClass> clazz, T obj) {
+    public <T extends BaseClass> Iterable<T> saveCimObjects(Class<? extends BaseClass> clazz, Iterable<T> objList) {
         var className = clazz.getSimpleName();
-        return (T) saveCimObject(className, obj);
+        return (Iterable<T>) saveCimObjects(className, (Iterable<BaseClass>) objList);
     }
 
     /**
-     * Reads a CIM object from the database.
+     * Reads several CIM objects of the same type from the database.
      *
-     * @param className The class name of the CIM object.
-     * @param id        The ID of the CIM object.
-     * @return          The read CIM object.
+     * The CIM objects have to be instances of the right class corresponding to the
+     * class name. The read function calls the findAllById method of the repository
+     * embedded in this class.
+     *
+     * @param className The class name of the CIM objects.
+     * @param idList    The list of IDs of the CIM objects.
+     * @return          The list of read CIM objects.
      */
-    public BaseClass readCimObject(String className, Long id) {
+    public Iterable<BaseClass> readCimObjects(String className, Iterable<Long> idList) {
         var readFunction = READ_MAP.get(className);
-        return readFunction.apply(id);
+        return readFunction.apply(idList);
     }
 
     /**
-     * Reads a CIM object from the database (as object of the correct class).
+     * Reads several CIM objects of the same type from the database.
      *
-     * @param className The class name of the CIM object.
-     * @param id        The ID of the CIM object.
-     * @return          The read CIM object.
+     * @param clazz  The class of the CIM objects.
+     * @param idList The list of IDs of the CIM objects.
+     * @return       The list of read CIM objects.
      */
     @SuppressWarnings("unchecked")
-    public <T extends BaseClass> T readCimObject(Class<T> clazz, Long id) {
+    public <T extends BaseClass> Iterable<T> readCimObjects(Class<T> clazz, Iterable<Long> idList) {
         var className = clazz.getSimpleName();
-        return (T) readCimObject(className, id);
+        return (Iterable<T>) readCimObjects(className, idList);
     }
 
     /**
-     * Deletes a CIM object from the database.
+     * Deletes several CIM objects of the same type from the database.
      *
-     * @param className The class name of the CIM object.
-     * @param id        The ID of the CIM object.
+     * The CIM objects have to be instances of the right class corresponding to the
+     * class name. The delete function calls the deleteAllById method of the
+     * repository embedded in this class.
+     *
+     * @param className The class name of the CIM objects.
+     * @param idList    The list of IDs of the CIM objects.
      */
-    public void deleteCimObject(String className, Long id) {
+    public void deleteCimObjects(String className, Iterable<Long> idList) {
         var deleteFunction = DELETE_MAP.get(className);
-        deleteFunction.accept(id);
+        deleteFunction.accept(idList);
     }
 
     /**
-     * Deletes a CIM object from the database (as object of the correct class).
+     * Deletes several CIM objects of the same type from the database.
      *
-     * @param className The class name of the CIM object.
-     * @param id        The ID of the CIM object.
+     * @param clazz  The class of the CIM objects.
+     * @param idList The list of IDs of the CIM objects.
      */
-    public <T extends BaseClass> void deleteCimObject(Class<T> clazz, Long id) {
+    public <T extends BaseClass> void deleteCimObjects(Class<T> clazz, Iterable<Long> idList) {
         var className = clazz.getSimpleName();
-        deleteCimObject(className, id);
+        deleteCimObjects(className, idList);
     }
 
     /**
@@ -153,42 +161,52 @@ public final class CimClassMap {
 {{/classes}}
 
     /**
-     * Map of CIM class name to function which saves a CIM object to the database.
+     * Map of CIM class name to function which saves several CIM objects to the database.
      */
-    private final Map<String, Function<BaseClass, BaseClass>> SAVE_MAP;
+    private final Map<String, Function<Iterable<BaseClass>, Iterable<BaseClass>>> SAVE_MAP;
     {
-        var map = new LinkedHashMap<String, Function<BaseClass, BaseClass>>();
+        var map = new LinkedHashMap<String, Function<Iterable<BaseClass>, Iterable<BaseClass>>>();
 
 {{#classes}}
-        map.put("{{.}}", obj -> repo{{.}}.save(({{.}}) obj));
+        map.put("{{.}}", objList -> saveAll(repo{{.}}, objList));
 {{/classes}}
 
         SAVE_MAP = Collections.unmodifiableMap(map);
     }
 
+    @SuppressWarnings("unchecked")
+    private <T extends BaseClass> Iterable<BaseClass> saveAll(CrudRepository<T, Long> repo, Iterable<BaseClass> objList) {
+        return (Iterable<BaseClass>) repo.saveAll((Iterable<T>) objList);
+    }
+
     /**
-     * Map of CIM class name to function which reads a CIM object from the database.
+     * Map of CIM class name to function which reads several CIM objects from the database.
      */
-    private final Map<String, Function<Long, BaseClass>> READ_MAP;
+    private final Map<String, Function<Iterable<Long>, Iterable<BaseClass>>> READ_MAP;
     {
-        var map = new LinkedHashMap<String, Function<Long, BaseClass>>();
+        var map = new LinkedHashMap<String, Function<Iterable<Long>, Iterable<BaseClass>>>();
 
 {{#classes}}
-        map.put("{{.}}", id -> repo{{.}}.findById(id).get());
+        map.put("{{.}}", idList -> findAllById(repo{{.}}, idList));
 {{/classes}}
 
         READ_MAP = Collections.unmodifiableMap(map);
     }
 
+    @SuppressWarnings("unchecked")
+    private <T extends BaseClass> Iterable<BaseClass> findAllById(CrudRepository<T, Long> repo, Iterable<Long> idList) {
+        return (Iterable<BaseClass>) repo.findAllById(idList);
+    }
+
     /**
-     * Map of CIM class name to function which deletes a CIM object from the database.
+     * Map of CIM class name to function which deletes several CIM objects from the database.
      */
-    private final Map<String, Consumer<Long>> DELETE_MAP;
+    private final Map<String, Consumer<Iterable<Long>>> DELETE_MAP;
     {
-        var map = new LinkedHashMap<String, Consumer<Long>>();
+        var map = new LinkedHashMap<String, Consumer<Iterable<Long>>>();
 
 {{#classes}}
-        map.put("{{.}}", id -> repo{{.}}.deleteById(id));
+        map.put("{{.}}", idList -> repo{{.}}.deleteAllById(idList));
 {{/classes}}
 
         DELETE_MAP = Collections.unmodifiableMap(map);

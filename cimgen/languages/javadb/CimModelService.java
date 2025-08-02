@@ -1,7 +1,6 @@
 package cim4jdb;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,17 +30,17 @@ public class CimModelService {
 
     /**
      * Searches for all CIM objects that match the specified cimModelId, and returns
-     * a map of ID to CIM type.
+     * a map of CIM type to lists of IDs.
      *
      * @param cimModelId ID of a CIM model
-     * @return           CIM objects of this model as map of ID to CIM type
+     * @return           CIM objects of this model as map of CIM type to ID list
      */
-    public Map<Long, String> getCimObjectInfos(Long cimModelId) {
-        var map = new HashMap<Long, String>();
+    public Map<String, List<Long>> getCimObjectInfos(Long cimModelId) {
+        var map = new LinkedHashMap<String, List<Long>>();
         for (var infos : baseClassRepository.findByModel(cimModelId)) {
             var id = (Long) infos[0];
             var cimType = (String) infos[1];
-            map.put(id, cimType);
+            map.computeIfAbsent(cimType, k -> new ArrayList<>()).add(id);
         }
         return map;
     }
@@ -56,24 +55,12 @@ public class CimModelService {
      */
     public CimModel saveCimModel(CimModel model, Iterable<BaseClass> objList) {
         model = cimModelRepository.save(model);
-        saveCimObjects(objList, model);
-        for (var entry : getCimObjectInfos(model.getCimModelId()).entrySet()) {
-            LOG.debug(String.format("Object in CIM model %d: id=%d type=%s", model.getCimModelId(), entry.getKey(),
-                    entry.getValue()));
+        var savedObjects = saveCimObjects(objList, model);
+        for (var obj : savedObjects) {
+            LOG.debug(String.format("Object in CIM model %d: id=%d type=%s", model.getCimModelId(), obj.getId(),
+                    obj.getCimType()));
         }
         return model;
-    }
-
-    /**
-     * Saves a CIM object to the database and links it to the model.
-     *
-     * @param obj   The CIM object.
-     * @param model The CIM model the object has to be linked to.
-     * @return      The saved CIM object.
-     */
-    public <T extends BaseClass> T saveCimObject(T obj, CimModel model) {
-        obj.setCimModel(model);
-        return cimClassMap.saveCimObject(obj.getClass(), obj);
     }
 
     /**
@@ -84,11 +71,17 @@ public class CimModelService {
      * @return        The list of saved CIM objects.
      */
     public List<BaseClass> saveCimObjects(Iterable<BaseClass> objList, CimModel model) {
-        var list = new ArrayList<BaseClass>();
+        var map = new LinkedHashMap<String, List<BaseClass>>();
         for (BaseClass obj : objList) {
             obj.setCimModel(model);
-            obj = cimClassMap.saveCimObject(obj.getClass(), obj);
-            list.add(obj);
+            map.computeIfAbsent(obj.getCimType(), k -> new ArrayList<>()).add(obj);
+        }
+        var list = new ArrayList<BaseClass>();
+        for (String className : map.keySet()) {
+            var savedObjects = cimClassMap.saveCimObjects(className, map.get(className));
+            for (BaseClass obj : savedObjects) {
+                list.add(obj);
+            }
         }
         return list;
     }
@@ -114,9 +107,11 @@ public class CimModelService {
      */
     public Map<String, BaseClass> readCimObjects(Long cimModelId, boolean linkCimObjects) {
         var model = new LinkedHashMap<String, BaseClass>();
-        for (var id_and_type : getCimObjectInfos(cimModelId).entrySet()) {
-            var obj = cimClassMap.readCimObject(id_and_type.getValue(), id_and_type.getKey());
-            model.put(obj.getRdfid(), obj);
+        for (var entry : getCimObjectInfos(cimModelId).entrySet()) {
+            var objList = cimClassMap.readCimObjects(entry.getKey(), entry.getValue());
+            for (BaseClass obj : objList) {
+                model.put(obj.getRdfid(), obj);
+            }
         }
         if (linkCimObjects) {
             for (var obj : model.values()) {
@@ -168,8 +163,8 @@ public class CimModelService {
      * @param cimModelId ID of a CIM model
      */
     public void deleteCimModel(Long cimModelId) {
-        for (var id_and_type : getCimObjectInfos(cimModelId).entrySet()) {
-            cimClassMap.deleteCimObject(id_and_type.getValue(), id_and_type.getKey());
+        for (var entry : getCimObjectInfos(cimModelId).entrySet()) {
+            cimClassMap.deleteCimObjects(entry.getKey(), entry.getValue());
         }
         cimModelRepository.deleteById(cimModelId);
     }
