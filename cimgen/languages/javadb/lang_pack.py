@@ -184,9 +184,9 @@ def _attribute_is_really_used(attribute: dict) -> bool:
     :param attribute: Dictionary with information about an attribute.
     :return:          Attribute is really used?
     """
-    if attribute["is_used"] and not attribute["is_list_attribute"]:
-        return True
-    return attribute["is_class_attribute_with_inverse_list"]
+    if attribute["is_list_attribute"]:
+        return False
+    return attribute["is_used"] or attribute["is_attribute_with_inverse_list"]
 
 
 # The code below this line is used after the main cim_generate phase to generate CimClassMap.java.

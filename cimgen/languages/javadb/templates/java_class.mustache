@@ -72,7 +72,7 @@ public class {{class_name}} extends {{subclass_of}} {
      *
      * NOT USED
 {{#is_used}}
-     * (should have used, but is list attribute)
+     * (should have used, but is list attribute{{#is_attribute_with_inverse_list}} (with inverse list){{/is_attribute_with_inverse_list}})
 {{/is_used}}
 {{/is_really_used}}
      */
@@ -165,12 +165,12 @@ public class {{class_name}} extends {{subclass_of}} {
 {{/is_enum_attribute}}
 {{#is_class_attribute}}
     @Transient
-{{#is_class_attribute_with_inverse_list}}
+{{#is_attribute_with_inverse_list}}
     private {{attribute_class}} {{variable_name}}; // ManyToOne
-{{/is_class_attribute_with_inverse_list}}
-{{^is_class_attribute_with_inverse_list}}
+{{/is_attribute_with_inverse_list}}
+{{^is_attribute_with_inverse_list}}
     private {{attribute_class}} {{variable_name}}; // OneToOne
-{{/is_class_attribute_with_inverse_list}}
+{{/is_attribute_with_inverse_list}}
 
 {{#is_really_used}}
     @Column(name = "{{column_name}}")
@@ -218,7 +218,12 @@ public class {{class_name}} extends {{subclass_of}} {
 {{/is_class_attribute}}
 {{#is_list_attribute}}
     @Transient
+{{#is_attribute_with_inverse_list}}
+    private Set<{{attribute_class}}> {{variable_name}} = new HashSet<>(); // ManyToMany
+{{/is_attribute_with_inverse_list}}
+{{^is_attribute_with_inverse_list}}
     private Set<{{attribute_class}}> {{variable_name}} = new HashSet<>(); // OneToMany
+{{/is_attribute_with_inverse_list}}
 
 {{#is_used}}
     @ElementCollection(fetch = FetchType.EAGER)
