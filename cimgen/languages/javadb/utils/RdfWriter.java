@@ -270,11 +270,9 @@ public class RdfWriter {
                                         writer.writeAttribute(RDF, "resource", resource);
                                     }
                                 } else if (attr instanceof String) {
-                                    for (var attrItem : ((String) attr).split(" ")) {
-                                        writer.writeCharacters("\n    ");
-                                        writer.writeEmptyElement(namespaceUrl, attrFullName);
-                                        writer.writeAttribute(RDF, "resource", "#" + attrItem);
-                                    }
+                                    writer.writeCharacters("\n    ");
+                                    writer.writeEmptyElement(namespaceUrl, attrFullName);
+                                    writer.writeAttribute(RDF, "resource", "#" + (String) attr);
                                 }
                             }
                         }

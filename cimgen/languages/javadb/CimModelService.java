@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -122,23 +123,34 @@ public class CimModelService {
                 var attrNames = obj.getAttributeNames();
                 for (String attrName : attrNames) {
                     Object attr = obj.getAttribute(attrName);
-                    if (attr instanceof String && !obj.isPrimitiveAttribute(attrName)
-                            && !obj.isEnumAttribute(attrName)) {
+                    if (obj.isPrimitiveAttribute(attrName) || obj.isEnumAttribute(attrName)) {
+                        // nothing to do
+                    } else if (attr instanceof String) {
                         // After reading from database there is only the Id of the linked object
                         // for class attributes. This Id is provided by getAttribute().
                         // It has to be replaced by the link to the real object.
+                        var linkedObj = model.get((String) attr);
+                        if (linkedObj != null) {
+                            try {
+                                obj.setAttribute(attrName, linkedObj);
+                            } catch (Exception ex) {
+                                LOG.error(String.format("Error while linking attribute %s.%s for rdfid %s",
+                                        obj.getCimType(), attrName, obj.getRdfid()), ex);
+                            }
+                        }
+                    } else if (attr instanceof Set<?>) {
                         // For few list attributes (e.g. TopologicalIsland to TopologicalNode)
-                        // getAttribute() provides a list of Ids separated by blanks.
-                        for (var attrItem : ((String) attr).split(" ")) {
-                            // First set id as link then try to find the object
-                            obj.setAttribute(attrName, attrItem);
-                            var linkedObj = model.get(attrItem);
-                            if (linkedObj != null) {
-                                try {
-                                    obj.setAttribute(attrName, linkedObj);
-                                } catch (Exception ex) {
-                                    LOG.error(String.format("Error while linking attribute %s.%s for rdfid %s",
-                                            obj.getCimType(), attrName, obj.getRdfid()), ex);
+                        // getAttribute() provides a set of Ids.
+                        for (var attrItem : ((Set<?>) attr)) {
+                            if (attrItem instanceof String) {
+                                var linkedObj = model.get((String) attrItem);
+                                if (linkedObj != null) {
+                                    try {
+                                        obj.setAttribute(attrName, linkedObj);
+                                    } catch (Exception ex) {
+                                        LOG.error(String.format("Error while linking attribute %s.%s for rdfid %s",
+                                                obj.getCimType(), attrName, obj.getRdfid()), ex);
+                                    }
                                 }
                             }
                         }

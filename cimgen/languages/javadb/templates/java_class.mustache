@@ -14,8 +14,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 
@@ -217,13 +220,15 @@ public class {{class_name}} extends {{subclass_of}} {
     @Transient
     private Set<{{attribute_class}}> {{variable_name}} = new HashSet<>(); // OneToMany
 
-    @Transient
-    private Set<String> {{variable_name}}IdSet = new HashSet<>();
 {{#is_used}}
-
-    @Column(name = "{{column_name}}")
-    private String {{variable_name}}Id;
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "{{class_name}}_{{column_name}}")
+    @Column(name = "{{column_name}}", nullable = false)
 {{/is_used}}
+{{^is_used}}
+    @Transient
+{{/is_used}}
+    private Set<String> {{variable_name}}IdSet = new HashSet<>();
 
     public Set<{{attribute_class}}> {{getter_name}}() {
         return {{variable_name}};
@@ -239,9 +244,6 @@ public class {{class_name}} extends {{subclass_of}} {
             _object_.{{.}}(this);
 {{/inverse_setter}}
             {{variable_name}}IdSet.add(_object_.getRdfid());
-{{#is_used}}
-            {{variable_name}}Id = String.join(" ", {{variable_name}}IdSet);
-{{/is_used}}
         }
     }
 
@@ -251,21 +253,12 @@ public class {{class_name}} extends {{subclass_of}} {
         if (objs.size() < ids.size()) {
             return ids;
         }
-{{#is_used}}
-        var id = (({{class_name}}) _this_).{{variable_name}}Id;
-        if (objs.isEmpty() && id != null && !id.isEmpty()) {
-            return id;
-        }
-{{/is_used}}
         return objs;
     }
 
     private static void {{setter_name}}(BaseClass _this_, Object _value_) {
         if (_value_ instanceof String) {
             (({{class_name}}) _this_).{{variable_name}}IdSet.add((String) _value_);
-{{#is_used}}
-            (({{class_name}}) _this_).{{variable_name}}Id = String.join(" ", (({{class_name}}) _this_).{{variable_name}}IdSet);
-{{/is_used}}
         } else if (_value_ instanceof {{attribute_class}}) {
             (({{class_name}}) _this_).{{setter_name}}(({{attribute_class}}) _value_);
         } else {
