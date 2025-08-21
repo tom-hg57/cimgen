@@ -62,19 +62,10 @@ public class {{class_name}} extends {{subclass_of}} {
 {{#comment}}
      * {{{comment}}}
 {{/comment}}
-{{#is_really_used}}
 {{^is_used}}
      *
-     * (shouldn't have used, but is class attribute with inverse list)
-{{/is_used}}
-{{/is_really_used}}
-{{^is_really_used}}
-     *
      * NOT USED
-{{#is_used}}
-     * (should have used, but is list attribute{{#is_attribute_with_inverse_list}} (with inverse list){{/is_attribute_with_inverse_list}})
 {{/is_used}}
-{{/is_really_used}}
      */
 {{#is_primitive_attribute}}
     @Column(name = "{{column_name}}")
@@ -172,12 +163,12 @@ public class {{class_name}} extends {{subclass_of}} {
     private {{attribute_class}} {{variable_name}}; // OneToOne
 {{/is_attribute_with_inverse_list}}
 
-{{#is_really_used}}
+{{#is_used}}
     @Column(name = "{{column_name}}")
-{{/is_really_used}}
-{{^is_really_used}}
+{{/is_used}}
+{{^is_used}}
     @Transient
-{{/is_really_used}}
+{{/is_used}}
     private String {{variable_name}}Id;
 
     public {{attribute_class}} {{getter_name}}() {

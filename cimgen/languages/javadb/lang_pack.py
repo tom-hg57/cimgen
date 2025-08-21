@@ -61,7 +61,6 @@ def run_template(output_path: str, class_details: dict) -> None:
         attribute["getter_name"] = _getter_setter_name("get", attribute["label"])
         attribute["setter_name"] = _getter_setter_name("set", attribute["label"])
         attribute["column_name"] = _column_name(attribute["label"])
-        attribute["is_really_used"] = "true" if _attribute_is_really_used(attribute) else ""
         if attribute["is_class_attribute"] or attribute["is_list_attribute"]:
             if "inverse_role" in attribute:
                 inverse_label = attribute["inverse_role"].split(".")[1]
@@ -174,19 +173,6 @@ def _attribute_is_primitive_string(attribute: dict) -> bool:
     return attribute["is_primitive_attribute"] and (
         attribute["attribute_class"] not in ("Float", "Decimal", "Integer", "Boolean")
     )
-
-
-def _attribute_is_really_used(attribute: dict) -> bool:
-    """Check if the attribute is really used.
-
-    List attributes couldn't be used as OneToMany links. Instead of that the inverse attribute is linked ManyToOne.
-
-    :param attribute: Dictionary with information about an attribute.
-    :return:          Attribute is really used?
-    """
-    if attribute["is_list_attribute"]:
-        return False
-    return attribute["is_used"] or attribute["is_attribute_with_inverse_list"]
 
 
 # The code below this line is used after the main cim_generate phase to generate CimClassMap.java.
