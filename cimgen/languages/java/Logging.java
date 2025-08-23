@@ -1,5 +1,7 @@
 package cim4j;
 
+import java.time.LocalDateTime;
+
 // import org.apache.logging.log4j.LogManager;
 // import org.apache.logging.log4j.Logger;
 
@@ -19,10 +21,12 @@ public class Logging {
         trace
     }
 
+    private static Level defaultLevel = Level.error;
     private Level level;
-    private java.lang.String className;
+    private String className;
     // private Logger log4jLogger;
-    private static boolean log4jEnabled = true;
+    // private static boolean log4jEnabled = true;
+    private static boolean log4jEnabled = false;
     private static boolean printlnEnabled = true;
 
     private Logging(final Class<?> clazz, Level logLevel) {
@@ -31,9 +35,9 @@ public class Logging {
         // log4jLogger = LogManager.getLogger(clazz);
     }
 
-    private void log(Level logLevel, java.lang.String message) {
+    private void log(Level logLevel, String message) {
         if (printlnEnabled && logLevel.compareTo(level) <= 0) {
-            System.out.println(className + " " + logLevel + ": " + message);
+            System.out.println(LocalDateTime.now() + " " + className + " " + logLevel + ": " + message);
         }
     }
 
@@ -44,7 +48,7 @@ public class Logging {
      * @param clazz The Class whose name should be used as the Logger name.
      */
     public static Logging getLogger(final Class<?> clazz) {
-        return new Logging(clazz, Level.error);
+        return new Logging(clazz, defaultLevel);
     }
 
     /**
@@ -74,8 +78,26 @@ public class Logging {
      * @param enabled logging enabled
      */
     public static void setEnabled(boolean enabled) {
-        log4jEnabled = enabled;
+        // log4jEnabled = enabled;
         printlnEnabled = enabled;
+    }
+
+    /**
+     * Returns the default log level.
+     *
+     * @return default log level
+     */
+    public static Level getDefaultLogLevel() {
+        return defaultLevel;
+    }
+
+    /**
+     * Sets the default log level.
+     *
+     * @param level Log level.
+     */
+    public static void setDefaultLogLevel(Level level) {
+        defaultLevel = level;
     }
 
     /**
@@ -83,7 +105,7 @@ public class Logging {
      *
      * @param message the message string to log.
      */
-    public void fatal(java.lang.String message) {
+    public void fatal(String message) {
         if (log4jEnabled) {
             // log4jLogger.fatal(message);
         }
@@ -95,7 +117,7 @@ public class Logging {
      *
      * @param message the message string to log.
      */
-    public void error(java.lang.String message) {
+    public void error(String message) {
         if (log4jEnabled) {
             // log4jLogger.error(message);
         }
@@ -107,7 +129,7 @@ public class Logging {
      *
      * @param message the message string to log.
      */
-    public void warn(java.lang.String message) {
+    public void warn(String message) {
         if (log4jEnabled) {
             // log4jLogger.warn(message);
         }
@@ -119,7 +141,7 @@ public class Logging {
      *
      * @param message the message string to log.
      */
-    public void info(java.lang.String message) {
+    public void info(String message) {
         if (log4jEnabled) {
             // log4jLogger.info(message);
         }
@@ -131,7 +153,7 @@ public class Logging {
      *
      * @param message the message string to log.
      */
-    public void debug(java.lang.String message) {
+    public void debug(String message) {
         if (log4jEnabled) {
             // log4jLogger.debug(message);
         }
@@ -143,7 +165,7 @@ public class Logging {
      *
      * @param message the message string to log.
      */
-    public void trace(java.lang.String message) {
+    public void trace(String message) {
         if (log4jEnabled) {
             // log4jLogger.trace(message);
         }
@@ -157,7 +179,7 @@ public class Logging {
      * @param message   the message CharSequence to log.
      * @param throwable the {@code Throwable} to log, including its stack trace.
      */
-    public void fatal(java.lang.String message, Throwable throwable) {
+    public void fatal(String message, Throwable throwable) {
         if (log4jEnabled) {
             // log4jLogger.fatal(message, throwable);
         }
@@ -171,7 +193,7 @@ public class Logging {
      * @param message   the message CharSequence to log.
      * @param throwable the {@code Throwable} to log, including its stack trace.
      */
-    public void error(java.lang.String message, Throwable throwable) {
+    public void error(String message, Throwable throwable) {
         if (log4jEnabled) {
             // log4jLogger.error(message, throwable);
         }
@@ -185,7 +207,7 @@ public class Logging {
      * @param message   the message CharSequence to log.
      * @param throwable the {@code Throwable} to log, including its stack trace.
      */
-    public void warn(java.lang.String message, Throwable throwable) {
+    public void warn(String message, Throwable throwable) {
         if (log4jEnabled) {
             // log4jLogger.warn(message, throwable);
         }

@@ -1,94 +1,181 @@
 package cim4j;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
-public abstract class BaseClass implements BaseClassInterface, BaseClassBuilder, AttributeInterface {
+/**
+ * Base class of the CIM type hierarchy - all not primitive CIM classes inherit
+ * from this class.
+ *
+ * The rdfid is a unique identifier inside of a CIM model.
+ * The cimType is the name of the real class of the CIM object - a subclass of
+ * BaseClass.
+ * The rdfid and cimType are fixed after creation of a CIM object.
+ */
+public abstract class BaseClass {
 
     private static final Logging LOG = Logging.getLogger(BaseClass.class);
 
-    @Override
-    public boolean isPrimitive() {
-        return false;
+    /**
+     * Constructor for subclasses.
+     *
+     * @param cimType The name of the CIM type.
+     * @param rdfid   The RDF ID of the CIM object read from rdf:ID or rdf:about.
+     */
+    protected BaseClass(final String cimType, final String rdfid) {
+        this.cimType = cimType;
+        this.rdfid = rdfid;
     }
 
-    @Override
-    public boolean isInitialized() {
-        return false;
+    /**
+     * The name of the CIM type.
+     */
+    private final String cimType;
+
+    public String getCimType() {
+        return cimType;
     }
 
-    @Override
-    public Object getValue() {
-        return null;
+    /**
+     * The RDF ID of the CIM object read from rdf:ID or rdf:about.
+     */
+    private final String rdfid;
+
+    public String getRdfid() {
+        return rdfid;
     }
 
+    /**
+     * Indicates whether some other object is "equal to" this one.
+     *
+     * @param obj  the reference object with which to compare.
+     * @return     true if this object is the same as the obj argument; false otherwise.
+     */
     @Override
-    public void setRdfid(java.lang.String id) {
-        LOG.error("Shouldn't have instantiated an abstract class: " + id);
+    public final boolean equals(Object obj) {
+        if (obj == this)
+            return true;
+        if (obj == null || obj.getClass() != getClass())
+            return false;
+        BaseClass other = (BaseClass) obj;
+        if (rdfid == null ? other.rdfid != null : !rdfid.equals(other.rdfid))
+            return false;
+        return true;
     }
 
+    /**
+     * Returns a hash code value for the object.
+     *
+     * This method is supported for the benefit of hash tables such as those
+     * provided by HashMap.
+     *
+     * @return  a hash code value for this object.
+     */
     @Override
-    public java.lang.String getRdfid() {
-        return null;
+    public final int hashCode() {
+        final int PRIME = 31;
+        int result = 1;
+        result = (result * PRIME) + (rdfid == null ? 0 : rdfid.hashCode());
+        return result;
     }
 
+    /**
+     * Returns a string representation of the object.
+     *
+     * @return  a string representation of the object.
+     */
     @Override
-    public void setAttribute(java.lang.String attrName, BaseClass value) {
-        LOG.error("No-one knows what to do with the attribute: " + attrName);
+    public final String toString() {
+       return cimType + " with rdfid " + rdfid;
     }
 
-    @Override
-    public void setAttribute(java.lang.String attrName, java.lang.String value) {
-        LOG.error("No-one knows what to do with the attribute: " + attrName);
-    }
+    /**
+     * Get a list of all attribute names of the CIM type.
+     *
+     * The list includes all inherited attributes. The attribute name is only the
+     * last part of the full name (without the class name).
+     *
+     * @return All attributes of the CIM type
+     */
+    public abstract List<String> getAttributeNames();
 
-    @Override
-    public BaseClass getAttribute(java.lang.String attrName) {
-        return null;
-    }
-
-    protected Map<java.lang.String, java.lang.String> getAttributeNamesMap() {
+    protected Map<String, AttrDetails> allAttrDetailsMap() {
         return Map.of();
     }
 
-    @Override
-    public Set<java.lang.String> getAttributeNames() {
-        throw new RuntimeException("Method not implemented.");
-    }
+    /**
+     * Get the full name of an attribute.
+     *
+     * The full name is "<class_name>.<attribute_name>".
+     *
+     * @param attrName The attribute name
+     * @return         The full name
+     */
+    public abstract String getAttributeFullName(String attrName);
 
-    @Override
-    public java.lang.String getAttributeFullName(java.lang.String attrName) {
-        throw new RuntimeException("Method not implemented.");
-    }
+    /**
+     * Get an attribute value.
+     *
+     * @param attrName The attribute name
+     * @return         The attribute value
+     */
+    public abstract Object getAttribute(String attrName);
 
-    @Override
-    public java.lang.String toString(boolean topClass) {
-        throw new RuntimeException("Method not implemented.");
-    }
+    /**
+     * Set an attribute value.
+     *
+     * @param attrName The attribute name
+     * @param value    The attribute value
+     */
+    public abstract void setAttribute(String attrName, Object value);
+
+    /**
+     * Check if the attribute is a primitive attribute.
+     *
+     * This includes datatype_attributes.
+     *
+     * @param attrName The attribute name
+     * @return         Is it a primitive attribute?
+     */
+    public abstract boolean isPrimitiveAttribute(String attrName);
+
+    /**
+     * Check if the attribute is an enum attribute.
+     *
+     * @param attrName The attribute name
+     * @return         Is it an enum attribute?
+     */
+    public abstract boolean isEnumAttribute(String attrName);
+
+    /**
+     * Check if the attribute is used.
+     *
+     * Some attributes are declared as unused in the CGMES definition. In most cases
+     * these are list attributes, i.e. lists of links to other CIM objects. But
+     * there are some exceptions, e.g. the list of ToplogicalNodes in
+     * TopologicalIsland.
+     *
+     * @param attrName The attribute name
+     * @return         Is the attribute used?
+     */
+    public abstract boolean isUsedAttribute(String attrName);
 
     /**
      * Get the namespace URL of an object of this class.
      *
      * @return The namespace URL
      */
-    @Override
-    public java.lang.String getClassNamespaceUrl() {
-        throw new RuntimeException("Method not implemented.");
-    }
+    public abstract String getClassNamespaceUrl();
 
     /**
      * Get the namespace URL of an attribute (also for inherited attributes).
      *
      * @return The namespace URL
      */
-    @Override
-    public java.lang.String getAttributeNamespaceUrl(java.lang.String attrName) {
-        throw new RuntimeException("Method not implemented.");
-    }
-
-    protected Map<java.lang.String, AttrDetails> allAttrDetailsMap() {
-        return Map.of();
-    }
+    public abstract String getAttributeNamespaceUrl(String attrName);
 
     /**
      * A resource can be used by multiple profiles. This is the set of profiles
@@ -96,10 +183,7 @@ public abstract class BaseClass implements BaseClassInterface, BaseClassBuilder,
      *
      * @return All possible profiles for an object of this class
      */
-    @Override
-    public Set<CGMESProfile> getPossibleProfiles() {
-        throw new RuntimeException("Method not implemented.");
-    }
+    public abstract Set<CGMESProfile> getPossibleProfiles();
 
     /**
      * This is the profile with most of the attributes.
@@ -107,20 +191,14 @@ public abstract class BaseClass implements BaseClassInterface, BaseClassBuilder,
      *
      * @return The recommended profiles for an object of this class
      */
-    @Override
-    public CGMESProfile getRecommendedProfile() {
-        throw new RuntimeException("Method not implemented.");
-    }
+    public abstract CGMESProfile getRecommendedProfile();
 
     /**
      * Get the possible profiles of an attribute (also for inherited attributes).
      *
      * @return All possible profiles for an attribute
      */
-    @Override
-    public Set<CGMESProfile> getPossibleAttributeProfiles(java.lang.String attrName) {
-        throw new RuntimeException("Method not implemented.");
-    }
+    public abstract Set<CGMESProfile> getPossibleAttributeProfiles(String attrName);
 
     /**
      * Get the possible profiles for an object of this class including the possible
@@ -131,21 +209,58 @@ public abstract class BaseClass implements BaseClassInterface, BaseClassBuilder,
      *
      * @return All possible profiles for an object of this class and its attributes
      */
-    @Override
-    public Set<CGMESProfile> getPossibleProfilesIncludingAttributes() {
-        throw new RuntimeException("Method not implemented.");
+    public abstract Set<CGMESProfile> getPossibleProfilesIncludingAttributes();
+
+    /**
+     * Helper functions.
+     */
+
+    protected static Boolean getBooleanFromString(String stringValue) {
+        return stringValue.toLowerCase().equals("true");
+    }
+
+    protected static Double getDoubleFromString(String stringValue) {
+        try {
+            return Double.valueOf(stringValue);
+        } catch (NumberFormatException ex) {
+            LOG.error("Error getting Double from String", ex);
+            return null;
+        }
+    }
+
+    protected static Integer getIntegerFromString(String stringValue) {
+        try {
+            return Integer.parseInt(stringValue.trim());
+        } catch (NumberFormatException ex) {
+            LOG.error("Error getting Integer from String", ex);
+            return null;
+        }
     }
 
     /**
-     * Nested helper class.
+     * Nested helper classes.
      */
+
     protected static class AttrDetails {
-        public AttrDetails(java.lang.String n, Set<CGMESProfile> c) {
+        public AttrDetails(String f, boolean u, String n, Set<CGMESProfile> c, boolean p, boolean e,
+                Function<BaseClass, Object> g, BiConsumer<BaseClass, Object> s) {
+            fullName = f;
+            isUsed = u;
             nameSpace = n;
             profiles = c;
+            isPrimitive = p;
+            isEnum = e;
+            getter = g;
+            setter = s;
         }
 
-        public java.lang.String nameSpace;
+        public String fullName;
+        public boolean isUsed;
+        public String nameSpace;
         public Set<CGMESProfile> profiles;
+        public Boolean isPrimitive;
+        public Boolean isEnum;
+        public Function<BaseClass, Object> getter;
+        public BiConsumer<BaseClass, Object> setter;
     }
 }
