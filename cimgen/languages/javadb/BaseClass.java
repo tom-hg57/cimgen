@@ -10,10 +10,12 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Inheritance;
 import jakarta.persistence.InheritanceType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
@@ -35,6 +37,8 @@ import org.springframework.data.repository.CrudRepository;
  */
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
+@Table(indexes = {
+        @Index(columnList = "cim_model_id") })
 public abstract class BaseClass {
 
     private static final Logging LOG = Logging.getLogger(BaseClass.class);
