@@ -1,8 +1,9 @@
-import chevron
 import logging
 import shutil
-from pathlib import Path
 from importlib.resources import files
+from pathlib import Path
+
+import chevron
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,6 @@ def get_class_location(class_name: str, class_map: dict, version: str) -> str:  
 
 # This is the function that runs the template.
 def run_template(output_path: str, class_details: dict) -> None:
-
     # Add some class infos
     class_details["table_name"] = _table_name(class_details["class_name"])
 
