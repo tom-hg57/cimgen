@@ -421,14 +421,12 @@ def _parse_rdf(input_dic: dict, version: str) -> dict[str, dict[str, CIMComponen
 def _write_all_files(
     elem_dict: dict[str, CIMComponentDefinition], lang_pack: ModuleType, output_path: str, version: str
 ) -> None:
-
     # Setup called only once: make output directory, create base class, create profile class, etc.
     lang_pack.setup(output_path, version, _get_profile_details(package_listed_by_short_name), _get_used_namespaces())
 
     recommended_class_profiles = _get_recommended_class_profiles(elem_dict)
 
     for class_name in elem_dict.keys():
-
         class_details = {
             "attributes": elem_dict[class_name].attributes(),
             "class_location": lang_pack.get_class_location(class_name, elem_dict, version),
@@ -509,20 +507,11 @@ def _write_files(class_details: dict, output_path: str) -> None:
         # If class is a subclass a super().__init__() is needed
         class_details["super_init"] = True
 
-    # The entry datatype for an attribute is only set for basic data types. If the entry is not set here, the attribute
-    # is a reference to another class and therefore the entry datatype is generated and set to the multiplicity
-    for i in range(len(class_details["attributes"])):
-        if (
-            "datatype" not in class_details["attributes"][i].keys()
-            and "multiplicity" in class_details["attributes"][i].keys()
-        ):
-            class_details["attributes"][i]["datatype"] = class_details["attributes"][i]["multiplicity"]
-
     class_details["lang_pack"].run_template(output_path, class_details)
 
 
 def _merge_profiles_and_classes(
-    profiles_array: list[dict[str, dict[str, CIMComponentDefinition]]]
+    profiles_array: list[dict[str, dict[str, CIMComponentDefinition]]],
 ) -> dict[str, CIMComponentDefinition]:
     """Merge class infos of all profiles.
 

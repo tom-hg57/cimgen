@@ -12,6 +12,8 @@ Generated from the CGMES files via cimgen: https://github.com/sogno-platform/cim
 #include "{{subclass_of}}.hpp"
 #include "BaseClassDefiner.hpp"
 #include "CGMESProfile.hpp"
+#include "CimClassDetails.hpp"
+
 {{#attribute_class_includes}}
 #include "{{.}}.hpp"
 {{/attribute_class_includes}}
@@ -33,29 +35,36 @@ namespace CIMPP
 		~{{class_name}}() override;
 {{#attributes}}
 
-		/** \brief {{comment}} Default: {{> set_default}} */
+		/** \brief {{{comment}}} Default: {{{default_value}}} */
 {{#is_primitive_attribute}}
-		CIMPP::{{attribute_class}} {{> label_without_keyword}};
+		CIMPP::{{attribute_class}} {{variable_name}};
 {{/is_primitive_attribute}}
 {{#is_datatype_attribute}}
-		CIMPP::{{attribute_class}} {{label}};
+		CIMPP::{{attribute_class}} {{variable_name}};
 {{/is_datatype_attribute}}
 {{#is_enum_attribute}}
-		CIMPP::{{attribute_class}} {{label}};
+		CIMPP::{{attribute_class}} {{variable_name}};
 {{/is_enum_attribute}}
 {{#is_class_attribute}}
-		CIMPP::{{attribute_class}}* {{label}};
+		CIMPP::{{attribute_class}}* {{variable_name}};
 {{/is_class_attribute}}
 {{#is_list_attribute}}
-		std::list<CIMPP::{{attribute_class}}*> {{label}};
+		std::list<CIMPP::{{attribute_class}}*> {{variable_name}};
 {{/is_list_attribute}}
 {{/attributes}}
 
 		static const char debugName[];
 		const char* debugString() const override;
 
-		std::list<CGMESProfile> getPossibleProfilesForClass() const override;
-		std::map<std::string, std::list<CGMESProfile>> getPossibleProfilesForAttributes() const override;
+		const std::list<std::string>& getAttributeNames() const override;
+
+		const std::string& getClassNamespaceUrl() const override;
+		const std::string& getAttributeNamespaceUrl(const std::string& attrName) const override;
+
+		const std::list<CGMESProfile>& getPossibleProfiles() const override;
+		const CGMESProfile& getRecommendedProfile() const override;
+		const std::list<CGMESProfile>& getPossibleAttributeProfiles(const std::string& attrName) const override;
+		const std::list<CGMESProfile>& getPossibleProfilesIncludingAttributes() const override;
 
 		static void addConstructToMap(std::unordered_map<std::string, BaseClass* (*)()>& factory_map);
 		static void addPrimitiveAssignFnsToMap(std::unordered_map<std::string, assign_function>& assign_map);
@@ -63,7 +72,12 @@ namespace CIMPP
 		void addPrimitiveGetFnsToMap(std::map<std::string, get_function>& get_map) const override;
 		void addClassGetFnsToMap(std::map<std::string, class_get_function>& get_map) const override;
 		void addEnumGetFnsToMap(std::map<std::string, get_function>& get_map) const override;
+
+		bool isAssignableFrom(BaseClass* otherObject) const override;
 		static const BaseClassDefiner declare();
+
+	protected:
+		std::map<std::string, AttrDetails> allAttrDetailsMap() const override;
 	};
 
 	BaseClass* {{class_name}}_factory();

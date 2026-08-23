@@ -10,3 +10,7 @@ __pycache__/
 */.DS_Store
 .DS_Store
 tests/
+*.log
+*.json
+dist/
+test-output/

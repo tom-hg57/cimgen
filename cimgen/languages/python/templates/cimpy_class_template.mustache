@@ -7,14 +7,14 @@ class {{class_name}}({{subclass_of}}):
     {{{class_comment}}}
 
 {{#attributes}}
-    :{{label}}: {{{comment}}} Default: {{#set_default}}{{datatype}}{{/set_default}}
+    :{{label}}: {{{comment}}} Default: {{{default_value}}}
 {{/attributes}}
     """
 
     possibleProfileList = {
-        "class": [{{#class_origin}}Profile.{{origin}}.value, {{/class_origin}}],
+        "class": [{{#class_origin}}Profile.{{.}}.value, {{/class_origin}}],
 {{#attributes}}
-        "{{label}}": [{{#attr_origin}}Profile.{{origin}}.value, {{/attr_origin}}],
+        "{{label}}": [{{#attr_origin}}Profile.{{.}}.value, {{/attr_origin}}],
 {{/attributes}}
     }
 
@@ -26,13 +26,13 @@ class {{class_name}}({{subclass_of}}):
     __doc__ += "\nDocumentation of parent class {{subclass_of}}:\n" + {{subclass_of}}.__doc__
 {{/super_init}}
 
-    def __init__(self{{#attributes}}, {{label}} = {{#set_default}}{{datatype}}{{/set_default}}{{/attributes}}{{#super_init}}, *args, **kw_args{{/super_init}}):
+    def __init__(self{{#attributes}}, {{label}} = {{{default_value}}}{{/attributes}}{{#super_init}}, *args, **kw_args{{/super_init}}):
 {{#super_init}}
         super().__init__(*args, **kw_args)
 {{/super_init}}
 
 {{#attributes}}
-        self.{{label}} = {{label}}
+        self.{{label}} = {{label}}{{#is_list_attribute}} or []{{/is_list_attribute}}
 {{/attributes}}
 {{^attributes}}
         pass
