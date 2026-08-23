@@ -1,4 +1,4 @@
-package cim4j;
+package cim4jdb;
 
 import java.time.LocalDateTime;
 
