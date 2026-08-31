@@ -3,6 +3,9 @@ Generated from the CGMES files via cimgen: https://github.com/sogno-platform/cim
 */
 #include "{{.Id}}.hpp"
 
+#include <cmath>
+#include <exception>
+#include <iostream>
 #include <string>
 
 #include "../src/CIMExceptions.hpp"
@@ -61,14 +64,22 @@ namespace CIMPP
 	{
 		std::string tmp;
 		lop >> tmp;
-		rop.value = stold(tmp);
-		rop.initialized = true;
+		try
+		{
+			rop.value = std::stold(tmp);
+			rop.initialized = std::isfinite(rop.value);
+		}
+		catch (const std::exception& ex)
+		{
+			rop.initialized = false;
+			std::cerr << "{{.Id}}::operator>>: input='" << tmp << "' error=" << ex.what() << std::endl;
+		}
 		return lop;
 	}
 
 	std::ostream& operator<<(std::ostream& os, const {{.Id}}& obj)
 	{
-		if (obj.initialized)
+		if (obj.initialized && std::isfinite(obj.value))
 		{
 			os << obj.value;
 		}
