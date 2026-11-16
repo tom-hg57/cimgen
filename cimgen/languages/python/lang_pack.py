@@ -1,9 +1,13 @@
-import os
-import chevron
-import logging
+# SPDX-FileCopyrightText: 2019 SOGNO
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import glob
+import logging
+import os
 from importlib.resources import files
-from typing import Callable
+
+import chevron
 
 logger = logging.getLogger(__name__)
 
@@ -26,36 +30,12 @@ def setup(output_path: str, version: str, cgmes_profile_details: list[dict], nam
 
 # These are the files that are used to generate the python files.
 class_template_file = {"filename": "cimpy_class_template.mustache", "ext": ".py"}
+base_template_file = {"filename": "cimpy_baseclass_template.mustache", "ext": ".py"}
 constants_template_file = {"filename": "cimpy_constants_template.mustache", "ext": ".py"}
 profile_template_file = {"filename": "cimpy_profile_template.mustache", "ext": ".py"}
+init_template_file = {"filename": "cimpy_init_template.mustache", "ext": ".py"}
 
 partials = {}
-
-
-# called by chevron, text contains the label {{datatype}}, which is evaluated by the renderer (see class template)
-def _set_default(text: str, render: Callable[[str], str]) -> str:
-    result = render(text)
-
-    # the field {{datatype}} either contains the multiplicity of an attribute if it is a reference or otherwise the
-    # datatype of the attribute. If no datatype is set and there is also no multiplicity entry for an attribute, the
-    # default value is set to None. The multiplicity is set for all attributes, but the datatype is only set for basic
-    # data types. If the data type entry for an attribute is missing, the attribute contains a reference and therefore
-    # the default value is either None or [] depending on the multiplicity. See also write_python_files
-    if result in ["M:1", "M:0..1", "M:1..1", ""]:
-        return "None"
-    elif result in ["M:0..n", "M:1..n"] or "M:" in result:
-        return '"list"'
-
-    result = result.split("#")[1]
-    if result in ["integer", "Integer"]:
-        return "0"
-    elif result in ["String", "DateTime", "Date"]:
-        return "''"
-    elif result == "Boolean":
-        return "False"
-    else:
-        # everything else should be a float
-        return "0.0"
 
 
 def get_base_class() -> str:
@@ -70,6 +50,10 @@ def get_class_location(class_name: str, class_map: dict, version: str) -> str:
 
 
 def run_template(output_path: str, class_details: dict) -> None:
+    # Add some attribute infos
+    for attribute in class_details["attributes"]:
+        attribute["default_value"] = _default_value(attribute)
+
     if class_details["class_name"] == "String":
         return
     class_file = os.path.join(output_path, class_details["class_name"] + class_template_file["ext"])
@@ -77,8 +61,7 @@ def run_template(output_path: str, class_details: dict) -> None:
 
 
 def _write_templated_file(class_file: str, class_details: dict, template_filename: str) -> None:
-    with open(class_file, "w", encoding="utf-8") as file:
-        class_details["set_default"] = _set_default
+    with open(class_file, "w", newline="", encoding="utf-8") as file:
         templates = files("cimgen.languages.python.templates")
         with templates.joinpath(template_filename).open(encoding="utf-8") as f:
             args = {
@@ -91,19 +74,9 @@ def _write_templated_file(class_file: str, class_details: dict, template_filenam
 
 
 # creates the Base class file, all classes inherit from this class
-def _create_base(path: str) -> None:
-    base_path = path + "/Base.py"
-    base = [
-        "class Base:\n",
-        '    """\n',
-        "    Base Class for CIM\n",
-        '    """\n\n',
-        "    def printxml(self, dict={}):\n",
-        "        return dict\n",
-    ]
-    with open(base_path, "w", encoding="utf-8") as f:
-        for line in base:
-            f.write(line)
+def _create_base(output_path: str) -> None:
+    class_file = os.path.join(output_path, "Base" + base_template_file["ext"])
+    _write_templated_file(class_file, {}, base_template_file["filename"])
 
 
 def _create_constants(output_path: str, version: str, namespaces: dict[str, str]) -> None:
@@ -119,19 +92,42 @@ def _create_cgmes_profile(output_path: str, profile_details: list[dict]) -> None
     _write_templated_file(class_file, class_details, profile_template_file["filename"])
 
 
+def _default_value(attribute: dict) -> str:
+    """Get the default value of the attribute.
+
+    :param attribute:  Dictionary with information about an attribute of a class.
+    :return:           Default value
+    """
+    if attribute["is_datatype_attribute"]:
+        return "0.0"
+    if attribute["is_enum_attribute"]:
+        return "None"
+    if attribute["is_class_attribute"]:
+        return "None"
+    if attribute["is_list_attribute"]:
+        return "None"
+    # primitive attribute
+    if attribute["attribute_class"] == "Integer":
+        return "0"
+    if attribute["attribute_class"] == "Boolean":
+        return "False"
+    if attribute["attribute_class"] in ("Float", "Decimal"):
+        return "0.0"
+    # primitive string attribute
+    return '""'
+
+
+# The code below this line is used after the main cim_generate phase to generate CimClassMap.java.
+
 class_blacklist = ["CGMESProfile", "CimConstants"]
 
 
 def resolve_headers(path: str, version: str) -> None:  # NOSONAR
     """Add all classes in __init__.py"""
-    filenames = glob.glob(path + "/*.py")
-    include_names = []
-    for filename in sorted(filenames):
-        include_names.append(os.path.splitext(os.path.basename(filename))[0])
-    with open(path + "/__init__.py", "w", encoding="utf-8") as header_file:
-        for include_name in include_names:
-            if include_name not in class_blacklist:
-                header_file.write(
-                    "from " + "." + include_name + " import " + include_name + " as " + include_name + "\n"
-                )
-        header_file.close()
+    init_file = path + "/__init__" + init_template_file["ext"]
+    classes = []
+    for file in sorted(glob.glob(path + "/*.py")):
+        class_name = os.path.splitext(os.path.basename(file))[0]
+        if class_name not in class_blacklist:
+            classes.append(class_name)
+    _write_templated_file(init_file, {"classes": classes}, init_template_file["filename"])

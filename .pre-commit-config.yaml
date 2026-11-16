@@ -1,26 +1,36 @@
+# SPDX-FileCopyrightText: 2024 SOGNO
+#
+# SPDX-License-Identifier: Apache-2.0
+
 exclude: ^cgmes_schema
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: check-yaml
       - id: end-of-file-fixer
       - id: trailing-whitespace
       - id: mixed-line-ending
+        args: [--fix=lf]
       - id: check-executables-have-shebangs
 
-  - repo: https://github.com/psf/black
-    rev: 24.10.0
+  - repo: https://github.com/pypa/pip-tools
+    rev: v7.6.2
     hooks:
-      - id: black
+      - id: pip-compile
+        name: pip-compile requirements.txt
+        files: ^pyproject\.toml$
+        args: [pyproject.toml, --generate-hashes, -o, requirements.txt]
 
-  - repo: https://github.com/PyCQA/flake8
-    rev: 7.1.1
+  - repo: https://github.com/fsfe/reuse-tool
+    rev: v6.3.0
     hooks:
-      - id: flake8
+      - id: reuse
 
-  - repo: https://github.com/ComPWA/pyright-pre-commit
-    rev: v1.1.391
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.4
     hooks:
-      - id: pyright
+      - id: ruff
+        args: [ --fix ]
+      - id: ruff-format

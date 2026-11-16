@@ -1,0 +1,39 @@
+# SPDX-FileCopyrightText: 2025 SOGNO
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: Go Build and Test on Linux and Windows
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  build:
+    name: Go Build and Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+    # Checkout the repository recursively to include submodules
+    - uses: actions/checkout@v7
+      with:
+        submodules: recursive
+
+    - name: Set up Go
+      uses: actions/setup-go@v7
+      with:
+        go-version: '1.25' # Specify the version of Go you want to use
+        cache: true # Caches Go modules for faster subsequent runs
+
+    - name: Install dependencies
+      run: go -C cimgen-go mod tidy # Ensures all dependencies are installed and the go.mod file is clean
+
+    - name: Build
+      run: go -C cimgen-go build -v ./... # Builds all packages in the repository
+
+    - name: Test
+      run: go -C cimgen-go test -v ./... # Runs all tests in the repository

@@ -1,12 +1,15 @@
+# SPDX-FileCopyrightText: 2019 SOGNO
+#
+# SPDX-License-Identifier: Apache-2.0
+
+import html
 import logging
-import textwrap
-import warnings
+import re
 from pathlib import Path
 from time import time
 from types import ModuleType
 
 import xmltodict
-from bs4 import BeautifulSoup
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
@@ -15,7 +18,6 @@ logger = logging.getLogger(__name__)
 class RDFSEntry:
     def __init__(self, json_object: dict):
         self.json_definition = json_object
-        return
 
     def as_json(self) -> dict[str, str]:
         json_object = {}
@@ -71,16 +73,11 @@ class RDFSEntry:
 
     def comment(self) -> str:
         if "rdfs:comment" in self.json_definition:
-            return (
-                RDFSEntry._extract_text(self.json_definition["rdfs:comment"])
-                .replace("–", "-")
-                .replace("“", '"')
-                .replace("”", '"')
-                .replace("’", "'")
-                .replace("°", "[SYMBOL REMOVED]")
-                .replace("º", "[SYMBOL REMOVED]")
-                .replace("\n", " ")
-            )
+            comment = RDFSEntry._extract_text(self.json_definition["rdfs:comment"])
+            decoded = html.unescape(html.unescape(comment))
+            plain_text = re.sub(r"<[^ =>][^>]*>", "", decoded)
+            one_line = re.sub(r"\s+", " ", plain_text).strip()
+            return one_line.replace('"', "'").replace("–", "-")
         else:
             return ""
 
@@ -161,20 +158,20 @@ class RDFSEntry:
     def _extract_text(object_dic) -> str:
         if isinstance(object_dic, list):
             return object_dic[0]["_"]
-        elif "_" in object_dic.keys():
-            return object_dic["_"]
-        elif "$rdfs:Literal" in object_dic.keys():
-            return object_dic["$rdfs:Literal"]
+        if isinstance(object_dic, dict):
+            if "_" in object_dic.keys():
+                return object_dic["_"]
+            if "$rdfs:Literal" in object_dic.keys():
+                return object_dic["$rdfs:Literal"]
         return ""
 
     # Extract String out of list or dictionary
     @staticmethod
     def _extract_string(object_dic) -> str:
-        if isinstance(object_dic, list):
-            if len(object_dic) > 0:
-                if isinstance(object_dic[0], str):
-                    return object_dic[0]
-                return RDFSEntry._get_about_or_resource(object_dic[0])
+        if isinstance(object_dic, list) and len(object_dic) > 0:
+            if isinstance(object_dic[0], str):
+                return object_dic[0]
+            return RDFSEntry._get_about_or_resource(object_dic[0])
         return RDFSEntry._get_about_or_resource(object_dic)
 
     # The definitions are often contained within a string with a name
@@ -254,31 +251,43 @@ class CIMComponentDefinition:
         return self.stereotype == "CIMDatatype"
 
 
-def _wrap_and_clean(txt: str, width: int = 120, initial_indent="", subsequent_indent="    ") -> str:
+def wrap_and_indent(text: str, width: int, indent: int) -> str:
     """
-    Used for comments: make them fit within <width> character, including indentation.
+    Wrap a string to lines with a maximum of characters.
+    It is used for comments: make them fit within <width> characters, including indentation.
+    The string contains no line breaks and no extra spaces.
     """
+    if indent < 0:
+        indent = 0
+    max_len = width - indent
+    if max_len < 1:
+        max_len = 1
+    pad = " " * indent
+    result_lines: list[str] = []
+    while len(text) > max_len:
+        split_index = text.rfind(" ", 0, max_len + 1)
+        if split_index == -1:
+            result_lines.append(pad + text[:max_len])
+            text = text[max_len:]
+        else:
+            result_lines.append(pad + text[:split_index])
+            text = text[split_index + 1 :]
+    result_lines.append(pad + text)
+    return "\n".join(result_lines)
 
-    # Ignore MarkupResemblesLocatorWarning
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
 
-        soup = BeautifulSoup(txt, "html.parser")
-
-    return "\n".join(
-        textwrap.wrap(
-            soup.text,
-            width=width,
-            initial_indent=initial_indent,
-            subsequent_indent=subsequent_indent,
-        )
-    )
+long_profile_names: dict[str, str]
+package_listed_by_short_name: dict[str, list[str]]
+all_namespaces: dict[str, str]
+used_namespaces: list[str]
 
 
-long_profile_names: dict[str, str] = {}
-package_listed_by_short_name: dict[str, list[str]] = {}
-all_namespaces: dict[str, str] = {"md": "http://iec.ch/TC57/61970-552/ModelDescription/1#"}  # NOSONAR
-used_namespaces: list[str] = []
+def init_globals() -> None:
+    global long_profile_names, package_listed_by_short_name, all_namespaces, used_namespaces
+    long_profile_names = {}
+    package_listed_by_short_name = {}
+    all_namespaces = {"md": "http://iec.ch/TC57/61970-552/ModelDescription/1#"}  # NOSONAR
+    used_namespaces = []
 
 
 def _rdfs_entry_types(rdfs_entry: RDFSEntry, version: str) -> list[str]:
@@ -302,7 +311,9 @@ def _rdfs_entry_types(rdfs_entry: RDFSEntry, version: str) -> list[str]:
     elif version == "cgmes_v3_0_0":
         entry_types.extend(_entry_types_version_3(rdfs_entry))
     else:
-        raise Exception(f"Got version '{version}', but only 'cgmes_v2_4_15' and 'cgmes_v3_0_0' are supported.")
+        raise ValueError(
+            f"Got version '{version}', but only 'cgmes_v2_4_13', 'cgmes_v2_4_15' and 'cgmes_v3_0_0' are supported."
+        )
 
     return entry_types
 
@@ -310,7 +321,7 @@ def _rdfs_entry_types(rdfs_entry: RDFSEntry, version: str) -> list[str]:
 def _entry_types_version_2(rdfs_entry: RDFSEntry) -> list[str]:
     entry_types: list[str] = []
     if rdfs_entry.stereotype():
-        if rdfs_entry.stereotype() == "Entsoe" and rdfs_entry.about()[-7:] == "Version":
+        if rdfs_entry.stereotype() == "Entsoe" and rdfs_entry.about().endswith("Version"):
             entry_types.append("profile_name_v2_4")
         if (
             rdfs_entry.stereotype() == "http://iec.ch/TC57/NonStandard/UML#attribute"  # NOSONAR
@@ -397,6 +408,9 @@ def _parse_rdf(input_dic: dict, version: str) -> dict[str, dict[str, CIMComponen
         if "profile_iri_v3" in rdfs_entry_types:
             profile_uri_list.append(rdfs_entry.version_iri())
 
+    if not short_profile_name or short_profile_name == "FH" or short_profile_name == "DH":
+        return {}
+
     _add_profile_to_packages(profile_name, short_profile_name, profile_uri_list)
 
     # Add attributes to corresponding class
@@ -421,14 +435,12 @@ def _parse_rdf(input_dic: dict, version: str) -> dict[str, dict[str, CIMComponen
 def _write_all_files(
     elem_dict: dict[str, CIMComponentDefinition], lang_pack: ModuleType, output_path: str, version: str
 ) -> None:
-
     # Setup called only once: make output directory, create base class, create profile class, etc.
     lang_pack.setup(output_path, version, _get_profile_details(package_listed_by_short_name), _get_used_namespaces())
 
     recommended_class_profiles = _get_recommended_class_profiles(elem_dict)
 
     for class_name in elem_dict.keys():
-
         class_details = {
             "attributes": elem_dict[class_name].attributes(),
             "class_location": lang_pack.get_class_location(class_name, elem_dict, version),
@@ -453,22 +465,18 @@ def _write_all_files(
         # extract comments
         if elem_dict[class_name].comment:
             class_details["class_comment"] = elem_dict[class_name].comment
-            class_details["wrapped_class_comment"] = _wrap_and_clean(
+            class_details["wrapped_class_comment"] = wrap_and_indent(
                 elem_dict[class_name].comment,
-                width=116,
-                initial_indent="",
-                subsequent_indent=" " * 6,
+                width=120,
+                indent=4,
             )
 
         for attribute in class_details["attributes"]:
             if "comment" in attribute:
-                attribute["comment"] = attribute["comment"].replace('"', "`")
-                attribute["comment"] = attribute["comment"].replace("'", "`")
-                attribute["wrapped_comment"] = _wrap_and_clean(
+                attribute["wrapped_comment"] = wrap_and_indent(
                     attribute["comment"],
-                    width=114 - len(attribute["label"]),
-                    initial_indent="",
-                    subsequent_indent=" " * 6,
+                    width=120,
+                    indent=4,
                 )
             attribute_class = _get_attribute_class(attribute)
             attribute_type = _get_attribute_type(attribute, elem_dict[attribute_class])
@@ -509,20 +517,11 @@ def _write_files(class_details: dict, output_path: str) -> None:
         # If class is a subclass a super().__init__() is needed
         class_details["super_init"] = True
 
-    # The entry datatype for an attribute is only set for basic data types. If the entry is not set here, the attribute
-    # is a reference to another class and therefore the entry datatype is generated and set to the multiplicity
-    for i in range(len(class_details["attributes"])):
-        if (
-            "datatype" not in class_details["attributes"][i].keys()
-            and "multiplicity" in class_details["attributes"][i].keys()
-        ):
-            class_details["attributes"][i]["datatype"] = class_details["attributes"][i]["multiplicity"]
-
     class_details["lang_pack"].run_template(output_path, class_details)
 
 
 def _merge_profiles_and_classes(
-    profiles_array: list[dict[str, dict[str, CIMComponentDefinition]]]
+    profiles_array: list[dict[str, dict[str, CIMComponentDefinition]]],
 ) -> dict[str, CIMComponentDefinition]:
     """Merge class infos of all profiles.
 
@@ -629,7 +628,9 @@ def _add_subclasses_of_subclasses(class_dict: dict[str, CIMComponentDefinition])
         class_dict[class_name].set_subclasses(sorted(subclasses_map.get(class_name, set())))
 
 
-def cim_generate(directory: Path, output_path: str, version: str, lang_pack: ModuleType) -> None:
+def cim_generate(
+    directory: Path, output_path: str, version: str, lang_pack: ModuleType, recursive: bool = False
+) -> None:
     """Generates cgmes classes from cgmes ontology
 
     This function uses package xmltodict to parse the RDF files. The _parse_rdf function sorts the classes to
@@ -643,17 +644,23 @@ def cim_generate(directory: Path, output_path: str, version: str, lang_pack: Mod
     created classes are stored. This folder should not exist and is created in the class generation procedure.
 
     :param directory: path to RDF files containing cgmes ontology,
-                      e.g. directory = "./examples/cgmes_schema/cgmes_v2_4_15_schema"
+                      e.g. directory = "./examples/cgmes_v2_4_15_schema"
     :param output_path: The output directory
     :param version:     CGMES version, e.g. version = "cgmes_v2_4_15"
     :param lang_pack:   python module containing language specific functions
+    :param recursive:   Search the schema directory recursively for RDF files
     """
+    init_globals()
     profiles_array: list[dict[str, dict[str, CIMComponentDefinition]]] = []
 
     t0 = time()
 
-    # Iterate over RDF files: first in the main directory, than in subdirectories
-    for file in sorted(directory.glob("*.rdf")) + sorted(directory.glob("*/**/*.rdf")):
+    # Iterate over RDF files: first in the main directory, than (optionally) in subdirectories
+    rdf_files = sorted(directory.glob("*.rdf"))
+    if recursive:
+        rdf_files.extend(sorted(directory.glob("*/**/*.rdf")))
+
+    for file in rdf_files:
         logger.info(f"Start of parsing file '{file}'.")
 
         xmlstring = file.read_text(encoding="utf-8")

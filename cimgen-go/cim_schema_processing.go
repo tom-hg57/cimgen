@@ -1,0 +1,542 @@
+// SPDX-FileCopyrightText: 2025 SOGNO
+//
+// SPDX-License-Identifier: Apache-2.0
+
+package cimgen
+
+import (
+	"sort"
+	"strings"
+)
+
+// postprocess performs various post-processing steps on the CIMSpecification.
+func (cimSpec *CIMSpecification) postprocess() {
+	cimSpec.determineDataTypes()
+	cimSpec.addOriginsOfAttributes()
+	cimSpec.setProfilePriorities()
+
+	//cimSpec.fixMissingMRIDs()
+	// This needs to be handled only for golang code generation
+	//cimSpec.renameIdentifiedObjectAttributes()
+	cimSpec.reorderOrigins()
+	cimSpec.setMainOrigin()
+
+	cimSpec.setHasInverseRole()
+	cimSpec.setHasClassAttributes()
+	cimSpec.setIsFixedAttributes()
+	cimSpec.setMissingNamespaces()
+	cimSpec.sortAttributes()
+	cimSpec.setIsInverseRoleAttributeList()
+	cimSpec.setVariableName()
+	cimSpec.removeCircularDependencies()
+	cimSpec.setSuperTypesOfSuperTypes()
+	cimSpec.setSubTypesOfSubTypes()
+}
+
+// removeCircularDependencies removes circular dependencies in the CIM specification
+// by using ID references for attributes that cause circular dependencies.
+// It iterates over all CIMTypes and their attributes, and if an attribute's data
+// type cannot be mapped to a primitive type, it marks the attribute to use an ID reference
+// instead of a direct reference to the CIMType. This helps to break circular dependencies
+// and allows for successful code generation.
+func (cimSpec *CIMSpecification) removeCircularDependencies() {
+	for _, t := range cimSpec.Types {
+		for _, attr := range t.Attributes {
+			if !attr.IsPrimitive && !attr.IsEnumValue && !attr.IsCIMDatatype {
+				attr.UseIDReference = true
+			}
+		}
+	}
+}
+
+// determineDataTypes determines the data types of attributes and marks them as primitive if applicable.
+func (cimSpec *CIMSpecification) determineDataTypes() {
+	// first, set PrimitiveType for CIMDatatypes
+	for _, t := range cimSpec.CIMDatatypes {
+		if t.CIMStereotype == "Compound" {
+			// Compound CIMDatatypes cannot be mapped to a single primitive type
+			continue
+		}
+		for _, attr := range t.Attributes {
+			if attr.Label == "value" {
+				if attr.CIMDataType == DateTypeDecimal {
+					t.PrimitiveType = DataTypeFloat
+				} else {
+					t.PrimitiveType = attr.CIMDataType
+				}
+				attr.DataType = attr.CIMDataType
+			} else {
+				attr.DataType = attr.RDFRange
+			}
+		}
+	}
+
+	// then, determine attribute data types
+	for _, t := range cimSpec.Types {
+		for _, attr := range t.Attributes {
+			if attr.CIMStereotype == "Primitive" || isPrimitiveType(attr.CIMDataType) {
+				attr.IsPrimitive = true
+				if attr.CIMDataType == DateTypeDecimal {
+					attr.DataType = DataTypeFloat
+				} else {
+					attr.DataType = attr.CIMDataType
+				}
+			} else if attr.CIMStereotype == "CIMDatatype" || isCIMDatatype(attr.CIMDataType, cimSpec) {
+				attr.IsCIMDatatype = true
+				attr.DataType = cimSpec.CIMDatatypes[attr.CIMDataType].PrimitiveType
+			} else if isEnumType(attr.RDFRange, cimSpec) {
+				attr.IsEnumValue = true
+				attr.DataType = attr.RDFRange
+			} else if !attr.IsList && (attr.CIMDataType == DataTypeObject || attr.CIMDataType == "") {
+				attr.IsClass = true
+				attr.DataType = attr.RDFRange
+			} else if !attr.IsList && (attr.CIMDataType != "") {
+				// For Compound type attributes TODO check if this is correct
+				attr.IsClass = true
+				attr.DataType = attr.CIMDataType
+			} else {
+				attr.DataType = attr.RDFRange
+			}
+		}
+	}
+
+	// finally, set DataType for PrimitiveTypes
+	for _, t := range cimSpec.PrimitiveTypes {
+		switch t.Id {
+		case DataTypeString:
+			t.DataType = DataTypeString
+		case DataTypeInteger:
+			t.DataType = DataTypeInteger
+		case DataTypeBoolean:
+			t.DataType = DataTypeBoolean
+		case DataTypeFloat:
+			t.DataType = DataTypeFloat
+		case DateTypeDecimal:
+			t.DataType = DataTypeFloat
+		default:
+			t.DataType = DataTypeString
+		}
+	}
+
+	// collect PrimitiveTypes and CIMDatatypes from attributes only once
+	// and assign this to the PrimitiveTypes and CIMDatatypes slices
+	for _, t := range cimSpec.Types {
+		primitiveTypeSet := make(map[string]struct{})
+		CIMDatatypeSet := make(map[string]struct{})
+		enumTypeSet := make(map[string]struct{})
+		for _, attr := range t.Attributes {
+			if attr.IsPrimitive {
+				primitiveTypeSet[attr.DataType] = struct{}{}
+			} else if attr.IsCIMDatatype {
+				CIMDatatypeSet[attr.CIMDataType] = struct{}{}
+			} else if attr.IsEnumValue {
+				enumTypeSet[attr.RDFRange] = struct{}{}
+			}
+		}
+		t.PrimitiveTypes = make([]string, 0, len(primitiveTypeSet))
+		for pt := range primitiveTypeSet {
+			t.PrimitiveTypes = append(t.PrimitiveTypes, pt)
+		}
+		sort.Strings(t.PrimitiveTypes)
+
+		t.CIMDatatypes = make([]string, 0, len(CIMDatatypeSet))
+		for dt := range CIMDatatypeSet {
+			t.CIMDatatypes = append(t.CIMDatatypes, dt)
+		}
+		sort.Strings(t.CIMDatatypes)
+		t.EnumTypes = make([]string, 0, len(enumTypeSet))
+		for et := range enumTypeSet {
+			t.EnumTypes = append(t.EnumTypes, et)
+		}
+		sort.Strings(t.EnumTypes)
+	}
+}
+
+// IsPrimitiveType checks if the given type string is a known data type.
+func isPrimitiveType(typeStr string) bool {
+	switch typeStr {
+	case DataTypeString, DataTypeInteger, DataTypeBoolean,
+		DataTypeFloat, DateTypeDecimal, DataTypeDate,
+		DataTypeDateTime, DataTypeMonthDay, DataTypeDuration:
+		return true
+	default:
+		return false
+	}
+}
+
+// is CIMDatatype checks if the given type string is a known CIM data type.
+func isCIMDatatype(typeStr string, cimSpec *CIMSpecification) bool {
+	if _, ok := cimSpec.CIMDatatypes[typeStr]; ok {
+		return true
+	} else {
+		return false
+	}
+}
+
+// isEnumType checks if the given type string is a known enumeration type.
+func isEnumType(typeStr string, cimSpec *CIMSpecification) bool {
+	if _, ok := cimSpec.Enums[typeStr]; ok {
+		return true
+	}
+	return false
+}
+
+// addOriginsOfAttributes adds the origins of attributes to their parent CIMType's Origins field.
+func (cimSpec *CIMSpecification) addOriginsOfAttributes() {
+	for _, t := range cimSpec.Types {
+		originSet := make(map[string]struct{})
+		// add origins of CIMType first
+		for _, origin := range t.Origins {
+			originSet[origin] = struct{}{}
+		}
+		// add origins of attributes
+		for _, attr := range t.Attributes {
+			for _, origin := range attr.Origins {
+				originSet[origin] = struct{}{}
+			}
+		}
+		// convert set to slice
+		t.Origins = make([]string, 0, len(originSet))
+		for origin := range originSet {
+			t.Origins = append(t.Origins, origin)
+		}
+	}
+}
+
+// sortOrigins sorts a slice of ontology keywords based on ontology priority.
+func (cimSpec *CIMSpecification) sortOrigins(origins []string) {
+	sort.Slice(origins, func(i, j int) bool {
+		var priorityI, priorityJ int
+		if ont, ok := cimSpec.Ontologies[origins[i]]; ok && ont != nil {
+			priorityI = ont.Priority
+		}
+		if ont, ok := cimSpec.Ontologies[origins[j]]; ok && ont != nil {
+			priorityJ = ont.Priority
+		}
+		return priorityI < priorityJ
+	})
+}
+
+// reorderOrigins reorders the Origins field of CIMTypes, CIMDatatypes, and CIMPrimitives
+// based on the priority of the ontologies, as well as the Origins field of their attributes.
+func (cimSpec *CIMSpecification) reorderOrigins() {
+	for _, t := range cimSpec.Types {
+		cimSpec.sortOrigins(t.Origins)
+		// reorder the Origins field of each attribute
+		for _, attr := range t.Attributes {
+			cimSpec.sortOrigins(attr.Origins)
+		}
+	}
+	for _, et := range cimSpec.Enums {
+		cimSpec.sortOrigins(et.Origins)
+	}
+	for _, dt := range cimSpec.CIMDatatypes {
+		cimSpec.sortOrigins(dt.Origins)
+		for _, attr := range dt.Attributes {
+			cimSpec.sortOrigins(attr.Origins)
+		}
+	}
+	for _, pt := range cimSpec.PrimitiveTypes {
+		cimSpec.sortOrigins(pt.Origins)
+	}
+}
+
+// setMainOrigin selects the main origin for each CIMType based on the Origins field of the attributes.
+// The origin that appears most frequently in the Origins field of the attributes is selected as the main origin.
+// If there is a tie, the first origin in the list is selected.
+// Only the attributes are considered that have more than one entry in the Origins field.
+// If "EQ" is among the most frequent origins, it is selected as the main origin.
+// Otherwise, the first origin in alphabetical order is selected.
+// This function updates the MainOrigin field of each CIMType accordingly.
+func (cimSpec *CIMSpecification) setMainOrigin() {
+	for _, t := range cimSpec.Types {
+
+		originCount := make(map[string]int)
+		tmpType := t
+		id := t.Id
+		for id != "" {
+			for _, attr := range tmpType.Attributes {
+				if len(attr.Origins) > 1 {
+					for _, origin := range attr.Origins {
+						if contains(t.Origins, origin) {
+							originCount[origin]++
+						}
+
+					}
+				}
+			}
+			// Move to the super type to check its attributes
+			if tmpType.SuperType != "" {
+				if superType, ok := cimSpec.Types[tmpType.SuperType]; ok {
+					tmpType = superType
+					id = tmpType.Id
+				} else {
+					break
+				}
+			} else {
+				break
+			}
+		}
+
+		filteredOrigins := make([]string, 0, len(t.Origins))
+		if len(originCount) > 0 {
+			maxCount := 0
+			for _, count := range originCount {
+				if count > maxCount {
+					maxCount = count
+				}
+			}
+
+			for origin, count := range originCount {
+				if count == maxCount {
+					filteredOrigins = append(filteredOrigins, origin)
+				}
+			}
+		} else {
+			filteredOrigins = t.Origins
+		}
+
+		if contains(filteredOrigins, "EQ") {
+			t.MainOrigin = "EQ"
+		} else {
+			sort.Strings(filteredOrigins)
+			t.MainOrigin = filteredOrigins[0]
+		}
+	}
+}
+
+// contains checks if a string slice contains a specific string.
+func contains(slice []string, str string) bool {
+	for _, v := range slice {
+		if v == str {
+			return true
+		}
+	}
+	return false
+}
+
+// sortAttributes sorts the attributes of each CIMType and CIMDatatype by their Id.
+func (cimSpec *CIMSpecification) sortAttributes() {
+	for _, t := range cimSpec.Types {
+		sort.Slice(t.Attributes, func(i, j int) bool {
+			return t.Attributes[i].Id < t.Attributes[j].Id
+		})
+	}
+	for _, t := range cimSpec.CIMDatatypes {
+		sort.Slice(t.Attributes, func(i, j int) bool {
+			return t.Attributes[i].Id < t.Attributes[j].Id
+		})
+	}
+}
+
+// setHasInverseRole iterates over all CIMTypes and attributes
+// and sets the HasInverseRole flag if the InverseRole field is not empty.
+// It also extracts the InverseRoleAttribute from the InverseRole field.
+func (cimSpec *CIMSpecification) setHasInverseRole() {
+	for _, t := range cimSpec.Types {
+		for _, attr := range t.Attributes {
+			if attr.CIMInverseRole != "" {
+				attr.HasInverseRole = true
+				parts := strings.Split(attr.CIMInverseRole, ".")
+				if len(parts) == 2 {
+					attr.InverseRoleAttribute = parts[1]
+				}
+			}
+		}
+	}
+}
+
+// setHasClassAttributes sets the IsClass flag for attributes based on their CIMDataType.
+func (cimSpec *CIMSpecification) setHasClassAttributes() {
+	for _, t := range cimSpec.Types {
+		for _, attr := range t.Attributes {
+			if attr.IsClass && !attr.IsList {
+				t.HasClassAttributes = true
+			}
+		}
+	}
+}
+
+// setIsFixedAttributes sets the IsFixed flag for attributes based on the CIMIsFixed field.
+func (cimSpec *CIMSpecification) setIsFixedAttributes() {
+	for _, t := range cimSpec.CIMDatatypes {
+		for _, attr := range t.Attributes {
+			if attr.CIMIsFixed != "" {
+				attr.IsFixed = true
+			}
+		}
+	}
+}
+
+// setMissingNamespaces fills in missing namespaces for types and their attributes and enums using the base URI.
+// It also ensures that the "md" namespace is present in the CIMSpecification.
+// It stores the namespaces that are used in the UsedNamespaces map.
+func (cimSpec *CIMSpecification) setMissingNamespaces() {
+
+	for _, t := range cimSpec.Types {
+		if !strings.HasSuffix(t.Namespace, "#") {
+			t.Namespace += "#"
+		}
+
+		if t.Namespace == "" || t.Namespace == "#" {
+			t.Namespace = cimSpec.SpecificationNamespaces["base"]
+		}
+		for _, attr := range t.Attributes {
+			if !strings.HasSuffix(attr.Namespace, "#") {
+				attr.Namespace += "#"
+			}
+			if attr.Namespace == "" || attr.Namespace == "#" {
+				attr.Namespace = cimSpec.SpecificationNamespaces["base"]
+			}
+		}
+	}
+	for _, e := range cimSpec.Enums {
+		if !strings.HasSuffix(e.Namespace, "#") {
+			e.Namespace += "#"
+		}
+		if e.Namespace == "" || e.Namespace == "#" {
+			e.Namespace = cimSpec.SpecificationNamespaces["base"]
+		}
+	}
+
+	revNamespaces := make(map[string]string)
+	// store namespaces in map where value and key are reversed
+	for key, value := range cimSpec.SpecificationNamespaces {
+		if key != "base" {
+			revNamespaces[value] = key
+		}
+	}
+
+	// fill UsedNamespaces map
+	for _, t := range cimSpec.Types {
+		if _, ok := revNamespaces[t.Namespace]; ok {
+			cimSpec.ProfileNamespaces[revNamespaces[t.Namespace]] = t.Namespace
+		}
+	}
+	for _, e := range cimSpec.Enums {
+		if _, ok := revNamespaces[e.Namespace]; ok {
+			cimSpec.ProfileNamespaces[revNamespaces[e.Namespace]] = e.Namespace
+		}
+	}
+
+	// add md namespace if not present
+	if _, ok := cimSpec.ProfileNamespaces["md"]; !ok {
+		cimSpec.SpecificationNamespaces["md"] = "http://iec.ch/TC57/61970-552/ModelDescription/1#" // NOSONAR
+		cimSpec.ProfileNamespaces["md"] = "http://iec.ch/TC57/61970-552/ModelDescription/1#"       // NOSONAR
+	}
+
+	// add rdf namespace if not present
+	if _, ok := cimSpec.ProfileNamespaces["rdf"]; !ok {
+		cimSpec.SpecificationNamespaces["rdf"] = "http://www.w3.org/1999/02/22-rdf-syntax-ns#" // NOSONAR
+		cimSpec.ProfileNamespaces["rdf"] = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"       // NOSONAR
+	}
+}
+
+func (cimSpec *CIMSpecification) setProfilePriorities() {
+	if _, ok := cimSpec.Ontologies["EQ"]; ok {
+		cimSpec.Ontologies["EQ"].Priority = 1
+		cimSpec.OntologyList = append(cimSpec.OntologyList, cimSpec.Ontologies["EQ"])
+	}
+
+	// assign remaining ontologies priorities based on alphabetical order of their keywords
+	keywords := make([]string, 0, len(cimSpec.Ontologies))
+	for k := range cimSpec.Ontologies {
+		if k != "EQ" {
+			keywords = append(keywords, k)
+		}
+	}
+	sort.Strings(keywords)
+	priority := 2
+	for _, k := range keywords {
+		cimSpec.Ontologies[k].Priority = priority
+		cimSpec.OntologyList = append(cimSpec.OntologyList, cimSpec.Ontologies[k])
+		priority++
+	}
+}
+
+// setIsInverseRoleAttributeList sets the IsInverseRoleAttributeList flag for attributes
+// based on whether their inverse role attribute is a list.
+func (cimSpec *CIMSpecification) setIsInverseRoleAttributeList() {
+	for _, t := range cimSpec.Types {
+		for _, attr := range t.Attributes {
+			if cimSpec.isAttributeWithInverseList(attr) {
+				attr.IsInverseRoleAttributeList = true
+			}
+		}
+	}
+}
+
+// isAttributeWithInverseList checks if the given attribute has an inverse role that is a list.
+func (cimSpec *CIMSpecification) isAttributeWithInverseList(a *CIMAttribute) bool {
+	if a.CIMInverseRole != "" {
+		parts := strings.Split(a.CIMInverseRole, ".")
+		inverseType := parts[0]
+		inverseLabel := parts[1]
+
+		for _, inverseAttr := range cimSpec.Types[inverseType].Attributes {
+			if inverseAttr.Label == inverseLabel {
+				if inverseAttr.IsList {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// setVariableName sets the name of the label used as variable name.
+// Some label names are not allowed as name of a variable.
+// Prevent collision of attribute and class name (e.g. AvailabilitySchedule in profile AvailabilitySchedule).
+func (cimSpec *CIMSpecification) setVariableName() {
+	for _, t := range cimSpec.Types {
+		for _, attr := range t.Attributes {
+			if attr.Label == "switch" || attr.Label == t.Id {
+				attr.VariableName = attr.Label + "_"
+			} else {
+				attr.VariableName = attr.Label
+			}
+		}
+	}
+}
+
+// setSuperTypesOfSuperTypes sets the list of supertypes for each type.
+// The algorithm searches supertypes of supertypes recursively. The resulting lists are set as
+// attribute SuperTypes in the type definition. They are sorted upwards according to the hierarchy.
+func (cimSpec *CIMSpecification) setSuperTypesOfSuperTypes() {
+	for _, t := range cimSpec.Types {
+		superTypes := make([]string, 0)
+		visited := make(map[string]bool)
+		current := t.SuperType
+		for current != "" && !visited[current] {
+			visited[current] = true
+			superTypes = append(superTypes, current)
+			if parent, ok := cimSpec.Types[current]; ok {
+				current = parent.SuperType
+			} else {
+				break
+			}
+		}
+		t.SuperTypes = superTypes
+	}
+}
+
+// setSubTypesOfSubTypes sets the list of subtypes for each type.
+// The algorithm searches subtypes of subtypes using the attribute SuperTypes of all types. The
+// supertypes lists must therefore have been filled beforehand. The resulting lists are set as
+// attribute SubTypes in the type definition. They are sorted alphabetically.
+func (cimSpec *CIMSpecification) setSubTypesOfSubTypes() {
+	subTypesMap := make(map[string][]string)
+	for _, t := range cimSpec.Types {
+		for _, superType := range t.SuperTypes {
+			subTypesMap[superType] = append(subTypesMap[superType], t.Id)
+		}
+	}
+	for _, t := range cimSpec.Types {
+		if subs, ok := subTypesMap[t.Id]; ok {
+			sort.Strings(subs)
+			t.SubTypes = subs
+		} else {
+			t.SubTypes = make([]string, 0)
+		}
+	}
+}
